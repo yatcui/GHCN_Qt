@@ -16,6 +16,7 @@
 
 */
 
+#include <cmath>
 #include <iostream>
 #include <numeric>
 #include <ranges>
@@ -25,6 +26,7 @@
 #include <memory>
 #include <map>
 #include <algorithm>
+#include <numbers>
 #include <iterator>
 #include <span>
 #include <fstream>
@@ -73,6 +75,42 @@ readStations(std::ifstream& inStream)
     }
     return stations;
 }
+
+
+double haversine(const double& lat1, const double& lat2, const double& lng1, const double& lng2)
+{
+    const double earth_radius = 6378.388;
+
+    const double r_lat1 = lat1 * std::numbers::pi_v<double> / 180;
+    const double r_lng1 = lng1 * std::numbers::pi_v<double> / 180;
+    const double r_lat2 = lat2 * std::numbers::pi_v<double> / 180;
+    const double r_lng2 = lng2 * std::numbers::pi_v<double> / 180;
+
+    const double d_lat = r_lat2 - r_lat1;
+    const double d_lng = r_lng2 - r_lng1;
+
+    double a = pow(sin(d_lat / 2), 2) + pow(sin(d_lng / 2), 2) * cos(r_lat1) * cos(r_lat2);
+    if (a > 1) {
+        a = 1;
+    }
+    if (a < 0) {
+        a = 1; // Enforce maximum of atan
+    }
+    double dist = earth_radius * 2 * atan2(sqrt(a), sqrt(1 - a));
+    return dist;
+}
+
+/*
+std::unique_ptr<std::vector<Station>>
+getNearestStations(const std::unique_ptr<std::vector<Station>>& stations, const double& latitude, const double& longitude)
+{
+    // 1. Calculate distance from given lat and lng for all stations
+
+    // 2. Sort ascending by distance
+
+    // 3. Give back sorted stations
+}
+*/
 
 std::unique_ptr<std::vector<Measurement>>
 readMeasurementsForStation(std::ifstream& inStream)
