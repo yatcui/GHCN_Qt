@@ -31,4 +31,12 @@ BOOST_AUTO_TEST_CASE(read_stations)
     }
 }
 
+BOOST_AUTO_TEST_CASE(csv_filename)
+{
+    const std::string stationId{"GME00102380"};
+    std::string csv_filename = csvFilenameFromStationId(stationId);
+    std::cout << std::format("File for station {}: {}\n", stationId, csv_filename);
+    BOOST_CHECK_EQUAL("../../data/GME00102380_2024-05-31.csv", csv_filename);
+
+}
 BOOST_AUTO_TEST_SUITE_END()
