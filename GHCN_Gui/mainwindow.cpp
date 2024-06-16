@@ -123,6 +123,10 @@ void MainWindow::on_cmb_stations_textActivated(const QString &stationId)
 void MainWindow::loadChart(const QString &stationId, int startYear, int endYear, MeasurementType type, const QString &graphName)
 {
     auto yearlyAverages = getYearlyAveragesForSpan(stationId.toStdString(), startYear, endYear, type);
+    if (yearlyAverages->size() == 0) {
+        // TODO: Message
+        return;
+    }
     QVector<double> x;
     QVector<double> y;
     for (const auto& pair : *yearlyAverages) {

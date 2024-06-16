@@ -20,6 +20,7 @@
 #include <numeric>
 #include <ranges>
 #include <string>
+#include <format>
 #include <regex>
 #include <memory>
 #include <map>
@@ -32,6 +33,9 @@
 #include "measurement.hpp"
 #include "station.hpp"
 
+// TODO: External configuration
+#define DATA_DIR_NAME "../../data/"
+#define CSV_EXT ".csv"
 
 /*
 IV. FORMAT OF "ghcnd-stations.txt"
@@ -203,14 +207,21 @@ getDailyValues(auto filtered_interval, const float& scaling, const int& year, co
 const std::string
 csvFilenameFromStationId(const std::string& station_id)
 {
-    const std::filesystem::path data_dir{"../../data/"};
-    const std::string csv_ext{".csv"};
+    const std::string dataDirName{DATA_DIR_NAME};
+    const std::string csvExt{CSV_EXT};
+
+    // Check if data directory exists.
+    if (!std::filesystem::exists(dataDirName)) {
+        std::cerr << std::format("Directory {} does not exist\n", dataDirName);
+        return std::string("");
+    }
+    const std::filesystem::path data_dir{dataDirName};
     std::vector<std::string> fileNames;
     for (auto const& entry : std::filesystem::directory_iterator{data_dir}) {
         if (!entry.is_directory()) {
             const std::string stem = entry.path().filename().stem().string();
             const std::string ext = entry.path().filename().extension().string();
-            if (ext == csv_ext && stem.starts_with(station_id)) {
+            if (ext == csvExt && stem.starts_with(station_id)) {
                 fileNames.push_back(stem);
             }
         }
@@ -220,7 +231,7 @@ csvFilenameFromStationId(const std::string& station_id)
         return std::string("");
     }
     std::sort(fileNames.begin(), fileNames.end());
-    std::string filename = data_dir.string() + fileNames.back() + csv_ext;
+    std::string filename = data_dir.string() + fileNames.back() + csvExt;
     return filename;
 }
 
