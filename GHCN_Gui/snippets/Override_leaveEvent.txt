@@ -1,0 +1,36 @@
+Copilot, 2024-06-09
+-------------------
+
+To get a signal when the mouse leaves the QCustomPlot widget, you can use the leaveEvent() function
+provided by the QWidget class, which QCustomPlot inherits from. Here’s an example of how you can do it:
+
+
+class MyCustomPlot : public QCustomPlot
+{
+    Q_OBJECT
+
+public:
+    MyCustomPlot(QWidget *parent = 0) : QCustomPlot(parent)
+    {
+        // Initialization code here
+    }
+
+protected:
+    void leaveEvent(QEvent *event)
+    {
+        // Signal that the mouse has left the widget
+        emit mouseLeft();
+        QCustomPlot::leaveEvent(event);
+    }
+
+signals:
+    void mouseLeft();
+};
+
+
+In this code, MyCustomPlot is a subclass of QCustomPlot. We override the leaveEvent() function to emit a mouseLeft signal
+whenever the mouse leaves the widget. You can then connect this signal to any slot you want to respond to this event.
+
+Remember to replace all instances of QCustomPlot in your code with MyCustomPlot to use this new functionality.
+Also, don’t forget to include the necessary Qt headers and use the Q_OBJECT macro in your class definition to enable
+Qt’s meta-object system, which is required for signals and slots to work.

@@ -1,0 +1,38 @@
+#include <QCoreApplication>
+#include <QFile>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QUrl>
+
+int main(int argc, char *argv[])
+{
+    QCoreApplication a(argc, argv);
+
+    QNetworkAccessManager manager;
+    QUrl url("http://example.com/path/to/file.txt");
+    QNetworkRequest request(url);
+
+    QNetworkReply *reply = manager.get(request);
+    QObject::connect(reply, &QNetworkReply::finished, & {
+        if (reply->error()) {
+            qDebug() << "Error: " << reply->errorString();
+            return;
+        }
+
+        QFile file("downloaded_file.txt");
+        if (!file.open(QIODevice::WriteOnly)) {
+            qDebug() << "Error: Unable to open file for writing";
+            return;
+        }
+
+        file.write(reply->readAll());
+        file.close();
+
+        qDebug() << "File downloaded successfully";
+        a.quit();
+    });
+
+    return a.exec();
+
+}
