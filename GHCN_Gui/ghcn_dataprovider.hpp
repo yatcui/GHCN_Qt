@@ -180,27 +180,6 @@ calcMeasurementSpanForYearRange(const std::unique_ptr<std::vector<Measurement>>&
 
 
 std::unique_ptr<std::map<int, float>>
-calcYearlyAverages(auto filtered_interval, float scaling)
-{
-    // map sorts entries in ascending order based on key (which is the year here). 
-    auto yearlyAverages = std::make_unique<std::map<int, float>>();
-    auto it = filtered_interval.begin();
-    while (it != filtered_interval.end()) {
-        int year{it->getYear()};
-        // Points after last measurement for current year.
-        auto last = std::find_if(it, filtered_interval.end(), [year](const auto& m){return m.getYear() != year;});
-        // Adds up measurement values and calculates average. Scaling before division to prevent rounding errors.
-        float average = std::accumulate(it, last, 0, [](int sum, Measurement m){return sum + m.getValue();}) * scaling /
-                        (std::ranges::distance(it, last));
-        //std::cout << std::format("{} values in {}\n", std::ranges::distance(it, last), year);
-        (*yearlyAverages)[year] = average; // O(1) for unordered_map, O(log n) for ordered map.
-        it = last;
-    }
-    return yearlyAverages;
-}
-
-
-std::unique_ptr<std::map<int, float>>
 calcMonthlyAverages(auto filtered_interval, float scaling, int year)
 {
     auto monthlyAverages = std::make_unique<std::map<int, float>>();
@@ -298,7 +277,22 @@ getYearlyAveragesForSpan(const std::string& station_id, int startYear, int endYe
         auto type{MeasurementType::TMAX};
         auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
         float scaling = Measurement::getScalingForType(type);
-        return calcYearlyAverages(filtered_interval, scaling);
+
+        // map sorts entries in ascending order based on key (which is the year here).
+        auto yearlyAverages = std::make_unique<std::map<int, float>>();
+        auto it = filtered_interval.begin();
+        while (it != filtered_interval.end()) {
+            int year{it->getYear()};
+            // Points after last measurement for current year.
+            auto last = std::find_if(it, filtered_interval.end(), [year](const auto& m){return m.getYear() != year;});
+            // Adds up measurement values and calculates average. Scaling before division to prevent rounding errors.
+            float average = std::accumulate(it, last, 0, [](int sum, Measurement m){return sum + m.getValue();}) * scaling /
+                            (std::ranges::distance(it, last));
+            //std::cout << std::format("{} values in {}\n", std::ranges::distance(it, last), year);
+            (*yearlyAverages)[year] = average; // O(1) for unordered_map, O(log n) for ordered map.
+            it = last;
+        }
+        return yearlyAverages;
     } else {
         return std::make_unique<std::map<int, float>>();
     }
