@@ -16,7 +16,7 @@ BOOST_AUTO_TEST_CASE(read_stations)
     if (std::ifstream inStream{filename, std::ios::in}) {
         auto stations = readStations(inStream);
 
-        std::cout << "Number of stations: " << stations->size() << std::endl;
+        // std::cout << "Number of stations: " << stations->size() << std::endl;
         BOOST_CHECK_EQUAL(10, stations->size());
 
         Station fst_station = stations->at(0);
@@ -35,21 +35,29 @@ BOOST_AUTO_TEST_CASE(csv_filename)
 {
     const std::string stationId{"GME00102380"};
     std::string csv_filename = csvFilenameFromStationId(stationId);
-    std::cout << std::format("File for station {}: {}\n", stationId, csv_filename);
+    // std::cout << std::format("File for station {}: {}\n", stationId, csv_filename);
     BOOST_CHECK_EQUAL("../../data/GME00102380_2024-05-31.csv", csv_filename);
-
 }
 
 BOOST_AUTO_TEST_CASE(nearest_stations)
 {
-    const double latitude = 49.47020;
-    const double longitude = 10.99019;
+    // Fuerth
+    constexpr double latitude = 49.47020;
+    constexpr double longitude = 10.99019;
 
     std::string filename{"../../data/ghcnd-stations_gm.txt"};
     if (std::ifstream inStream{filename, std::ios::in}) {
         auto stations = readStations(inStream);
         BOOST_CHECK_EQUAL(1124, stations->size());
-        //auto nearest_stations = getNearestStations(stations, latitude, longitude);
+        // (index, distance) pairs for stations within radius of 50 km around Fuerth.
+        auto nearestStations = getNearestStations(stations, latitude, longitude, 50);
+        std::pair<int, double> top = nearestStations->at(0);
+        Station nearest = stations->at(top.first);
+        BOOST_CHECK_EQUAL("GME00122614", nearest.getId());
+        BOOST_CHECK_EQUAL("2.2", std::format("{:.1f}", top.second));
+        // for (auto p : *nearestStations) {
+        //     std::cout << std::format("{} at {:.1f} km\n", stations->at(p.first).getId(), p.second);
+        // }
     } else {
         std::string msg = std::format("Opening {} failed", filename);
         BOOST_FAIL(msg);
@@ -61,7 +69,7 @@ BOOST_AUTO_TEST_CASE(distance_on_earth)
     // Distance between Fuerth and Zuerich
     double dist1 = haversine(49.4739, 47.3831, 10.9982, 8.5667);
     double dist2 = haversine(47.3831, 49.4739, 8.5667, 10.9982);
-    std::cout << std::format("Distance Zuerich - Fuerth: {} km\n", dist2);
+    // std::cout << std::format("Distance Zuerich - Fuerth: {} km\n", dist2);
 
     BOOST_CHECK_EQUAL("293.966657", std::format("{:.6f}", dist1));
     BOOST_CHECK_EQUAL(dist1, dist2);

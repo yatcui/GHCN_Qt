@@ -79,7 +79,7 @@ readStations(std::ifstream& inStream)
 
 double haversine(const double& lat1, const double& lat2, const double& lng1, const double& lng2)
 {
-    const double earth_radius = 6378.388;
+    constexpr double earth_radius = 6378.388;
 
     const double r_lat1 = lat1 * std::numbers::pi_v<double> / 180;
     const double r_lng1 = lng1 * std::numbers::pi_v<double> / 180;
@@ -100,17 +100,25 @@ double haversine(const double& lat1, const double& lat2, const double& lng1, con
     return dist;
 }
 
-/*
-std::unique_ptr<std::vector<Station>>
-getNearestStations(const std::unique_ptr<std::vector<Station>>& stations, const double& latitude, const double& longitude)
+std::unique_ptr<std::vector<std::pair<int, double>>>
+getNearestStations(const std::unique_ptr<std::vector<Station>>& stations, const double& latitude, const double& longitude, int radius)
 {
+    auto nearestStations = std::make_unique<std::vector<std::pair<int, double>>>();
     // 1. Calculate distance from given lat and lng for all stations
-
+    for (int index{0}; const Station& station : *stations) {
+        double distance = haversine(latitude, station.getLatitude(), longitude, station.getLongitude());
+        if (distance <= radius) {
+            nearestStations->push_back(std::pair<int, double>(index, distance));
+        }
+        ++index;
+    }
     // 2. Sort ascending by distance
+    std::ranges::sort(*nearestStations, [](auto p1, auto p2) {return p1.second < p2.second;});
 
     // 3. Give back sorted stations
+    return nearestStations;
 }
-*/
+
 
 std::unique_ptr<std::vector<Measurement>>
 readMeasurementsForStation(std::ifstream& inStream)
