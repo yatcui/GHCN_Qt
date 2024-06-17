@@ -179,57 +179,6 @@ calcMeasurementSpanForYearRange(const std::unique_ptr<std::vector<Measurement>>&
 }
 
 
-std::unique_ptr<std::map<int, float>>
-calcMonthlyAverages(auto filtered_interval, float scaling, int year)
-{
-    auto monthlyAverages = std::make_unique<std::map<int, float>>();
-    // Start: Iterator to year.
-    auto it = std::ranges::find_if(filtered_interval, [year](auto m) {return m.getYear() == year;});
-    if (it == filtered_interval.end()) {
-        // Year not found => return empty map.
-        return monthlyAverages;
-    }
-    auto last = std::find_if(it, filtered_interval.end(), [year](const auto& m){return m.getYear() != year;});        
-    // Add up measurements for each month in year.
-    while (it != last) {
-        int month{it->getMonth()};
-        auto last_day = std::find_if(it, filtered_interval.end(), [month](const auto& m){return m.getMonth() != month;});
-        float average = std::accumulate(it, last_day, 0, [](int sum, Measurement m){return sum + m.getValue();}) * scaling /
-                        (std::ranges::distance(it, last_day));
-        //std::cout << std::format("{} values in {}\n", std::ranges::distance(it, last_day), month);
-        (*monthlyAverages)[month] = average;
-        it = last_day;
-    }
-    return monthlyAverages;
-}
-
-
-std::unique_ptr<std::map<int, float>>
-calcDailyValues(auto filtered_interval, float scaling, int year, int month)
-{
-    auto dailyValues = std::make_unique<std::map<int, float>>();
-    // Determines iterator to year.
-    auto it = std::ranges::find_if(filtered_interval, [year](auto m) {return m.getYear() == year;});
-    if (it == filtered_interval.end()) {
-        // year not found => return empty map.
-        return dailyValues;
-    }
-    // Advances iterator to month.
-    while (it != filtered_interval.end() && it->getMonth() != month) {
-        ++it;
-    }
-    if (it == filtered_interval.end()) {
-        // month not found => return empty map.
-        return dailyValues;
-    }
-    while (it != filtered_interval.end() && it->getMonth() == month) {
-        (*dailyValues)[it->getDay()] = it->getValue() * scaling;
-        ++it;
-    }
-    return dailyValues;
-}
-
-
 const std::string
 csvFilenameFromStationId(const std::string& station_id)
 {
@@ -263,7 +212,7 @@ csvFilenameFromStationId(const std::string& station_id)
 
 
 std::unique_ptr<std::map<int, float>>
-getYearlyAveragesForSpan(const std::string& station_id, int startYear, int endYear, const MeasurementType& type)
+getYearlyAverages(const std::string& station_id, int startYear, int endYear, const MeasurementType& type)
 {
     std::string filename = csvFilenameFromStationId(station_id);
     if (filename.size() == 0) {
@@ -274,7 +223,6 @@ getYearlyAveragesForSpan(const std::string& station_id, int startYear, int endYe
         auto measurements = readMeasurementsForStation(inStream);
         inStream.close();
         auto interval = calcMeasurementSpanForYearRange(measurements, startYear, endYear);
-        auto type{MeasurementType::TMAX};
         auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
         float scaling = Measurement::getScalingForType(type);
 
@@ -293,6 +241,87 @@ getYearlyAveragesForSpan(const std::string& station_id, int startYear, int endYe
             it = last;
         }
         return yearlyAverages;
+    } else {
+        return std::make_unique<std::map<int, float>>();
+    }
+}
+
+
+std::unique_ptr<std::map<int, float>>
+getMonthlyAverages(const std::string& station_id, int year, const MeasurementType& type)
+{
+    std::string filename = csvFilenameFromStationId(station_id);
+    if (filename.size() == 0) {
+        return std::make_unique<std::map<int, float>>();
+    }
+
+    if (std::ifstream inStream{filename, std::ios::in}) {
+        auto measurements = readMeasurementsForStation(inStream);
+        inStream.close();
+        auto interval = calcMeasurementSpanForYearRange(measurements, year, year);
+        auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
+        float scaling = Measurement::getScalingForType(type);
+
+        auto monthlyAverages = std::make_unique<std::map<int, float>>();
+        // Start: Iterator to year.
+        auto it = std::ranges::find_if(filtered_interval, [year](auto m) {return m.getYear() == year;});
+        if (it == filtered_interval.end()) {
+            // Year not found => return empty map.
+            return monthlyAverages;
+        }
+        auto last = std::find_if(it, filtered_interval.end(), [year](const auto& m){return m.getYear() != year;});
+        // Add up measurements for each month in year.
+        while (it != last) {
+            int month{it->getMonth()};
+            auto last_day = std::find_if(it, filtered_interval.end(), [month](const auto& m){return m.getMonth() != month;});
+            float average = std::accumulate(it, last_day, 0, [](int sum, Measurement m){return sum + m.getValue();}) * scaling /
+                            (std::ranges::distance(it, last_day));
+            //std::cout << std::format("{} values in {}\n", std::ranges::distance(it, last_day), month);
+            (*monthlyAverages)[month] = average;
+            it = last_day;
+        }
+        return monthlyAverages;
+    } else {
+        return std::make_unique<std::map<int, float>>();
+    }
+}
+
+
+std::unique_ptr<std::map<int, float>>
+getDailyValues(const std::string& station_id, int year, int month, const MeasurementType& type)
+{
+    std::string filename = csvFilenameFromStationId(station_id);
+    if (filename.size() == 0) {
+        return std::make_unique<std::map<int, float>>();
+    }
+
+    if (std::ifstream inStream{filename, std::ios::in}) {
+        auto measurements = readMeasurementsForStation(inStream);
+        inStream.close();
+        auto interval = calcMeasurementSpanForYearRange(measurements, year, year);
+        auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
+        float scaling = Measurement::getScalingForType(type);
+
+        auto dailyValues = std::make_unique<std::map<int, float>>();
+        // Determines iterator to year.
+        auto it = std::ranges::find_if(filtered_interval, [year](auto m) {return m.getYear() == year;});
+        if (it == filtered_interval.end()) {
+            // year not found => return empty map.
+            return dailyValues;
+        }
+        // Advances iterator to month.
+        while (it != filtered_interval.end() && it->getMonth() != month) {
+            ++it;
+        }
+        if (it == filtered_interval.end()) {
+            // month not found => return empty map.
+            return dailyValues;
+        }
+        while (it != filtered_interval.end() && it->getMonth() == month) {
+            (*dailyValues)[it->getDay()] = it->getValue() * scaling;
+            ++it;
+        }
+        return dailyValues;
     } else {
         return std::make_unique<std::map<int, float>>();
     }

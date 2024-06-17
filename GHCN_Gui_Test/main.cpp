@@ -81,6 +81,40 @@ BOOST_AUTO_TEST_CASE(api_nearest_stations)
     STATION_FILE_NAME = station_file_name;
 }
 
+BOOST_AUTO_TEST_CASE(api_yearly_averages)
+{
+    const std::string stationId{"GME00102380"};
+    auto yearlyAverages = getYearlyAverages(stationId, 1960, 2000, MeasurementType::TMAX);
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages)[1960]), "13.5");
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages)[2000]), "14.7");
+    // for (auto p : *yearlyAverages) {
+    //     std::cout << std::format("{} {:.1f}\n", p.first, p.second);
+    // }
+}
+
+BOOST_AUTO_TEST_CASE(api_montly_averages)
+{
+    const std::string stationId{"GME00102380"};
+    auto monthlyAverages = getMonthlyAverages(stationId, 2000, MeasurementType::TMAX);
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*monthlyAverages)[1]), "2.7");
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*monthlyAverages)[12]), "5.2");
+    // for (auto p : *monthlyAverages) {
+    //     std::cout << std::format("{} {:.1f}\n", p.first, p.second);
+    // }
+}
+
+BOOST_AUTO_TEST_CASE(api_daily_values)
+{
+    const std::string stationId{"GME00102380"};
+    auto dailyValues = getDailyValues(stationId, 2000, 12, MeasurementType::TMAX);
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*dailyValues)[1]), "6.6");
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*dailyValues)[31]), "0.9");
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*dailyValues)[23]), "-4.3");
+    // for (auto p : *dailyValues) {
+    //     std::cout << std::format("{} {:.1f}\n", p.first, p.second);
+    // }
+}
+
 BOOST_AUTO_TEST_CASE(distance_on_earth)
 {
     // Distance between Fuerth and Zuerich
