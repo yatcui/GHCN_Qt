@@ -36,8 +36,9 @@
 #include "station.hpp"
 
 // TODO: External configuration
-#define DATA_DIR_NAME "../../data/"
-#define CSV_EXT ".csv"
+std::string DATA_DIR_NAME{"../../data/"};
+std::string CSV_EXT{".csv"};
+std::string STATION_FILE_NAME{"ghcnd-stations.txt"};
 
 /*
 IV. FORMAT OF "ghcnd-stations.txt"
@@ -77,7 +78,7 @@ readStations(std::ifstream& inStream)
 }
 
 
-double haversine(const double& lat1, const double& lat2, const double& lng1, const double& lng2)
+double haversine(double lat1,  double lat2, double lng1, double lng2)
 {
     constexpr double earth_radius = 6378.388;
 
@@ -101,7 +102,7 @@ double haversine(const double& lat1, const double& lat2, const double& lng1, con
 }
 
 std::unique_ptr<std::vector<std::pair<int, double>>>
-getNearestStations(const std::unique_ptr<std::vector<Station>>& stations, const double& latitude, const double& longitude, int radius)
+calcNearestStations(const std::unique_ptr<std::vector<Station>>& stations, double latitude, double longitude, int radius)
 {
     auto nearestStations = std::make_unique<std::vector<std::pair<int, double>>>();
     // 1. Calculate distance from given lat and lng for all stations
@@ -150,7 +151,7 @@ readMeasurementsForStation(std::ifstream& inStream)
 
 
 std::span<const Measurement>
-getMeasurementsForYearSpan(const std::unique_ptr<std::vector<Measurement>>& measurements, int startYear, int endYear)
+calcMeasurementSpanForYearRange(const std::unique_ptr<std::vector<Measurement>>& measurements, int startYear, int endYear)
 {
     const std::vector<Measurement>& data = *measurements;
     
@@ -179,7 +180,7 @@ getMeasurementsForYearSpan(const std::unique_ptr<std::vector<Measurement>>& meas
 
 
 std::unique_ptr<std::map<int, float>>
-getYearlyAverages(auto filtered_interval, const float& scaling)
+calcYearlyAverages(auto filtered_interval, float scaling)
 {
     // map sorts entries in ascending order based on key (which is the year here). 
     auto yearlyAverages = std::make_unique<std::map<int, float>>();
@@ -200,7 +201,7 @@ getYearlyAverages(auto filtered_interval, const float& scaling)
 
 
 std::unique_ptr<std::map<int, float>>
-getMontlyAverages(auto filtered_interval, const float& scaling, const int& year)
+calcMonthlyAverages(auto filtered_interval, float scaling, int year)
 {
     auto monthlyAverages = std::make_unique<std::map<int, float>>();
     // Start: Iterator to year.
@@ -225,7 +226,7 @@ getMontlyAverages(auto filtered_interval, const float& scaling, const int& year)
 
 
 std::unique_ptr<std::map<int, float>>
-getDailyValues(auto filtered_interval, const float& scaling, const int& year, const int& month)
+calcDailyValues(auto filtered_interval, float scaling, int year, int month)
 {
     auto dailyValues = std::make_unique<std::map<int, float>>();
     // Determines iterator to year.
@@ -293,12 +294,29 @@ getYearlyAveragesForSpan(const std::string& station_id, int startYear, int endYe
     if (std::ifstream inStream{filename, std::ios::in}) {
         auto measurements = readMeasurementsForStation(inStream);
         inStream.close();
-        auto interval = getMeasurementsForYearSpan(measurements, startYear, endYear);
+        auto interval = calcMeasurementSpanForYearRange(measurements, startYear, endYear);
         auto type{MeasurementType::TMAX};
         auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
         float scaling = Measurement::getScalingForType(type);
-        return getYearlyAverages(filtered_interval, scaling);
+        return calcYearlyAverages(filtered_interval, scaling);
     } else {
         return std::make_unique<std::map<int, float>>();
     }
 }
+
+
+std::unique_ptr<std::vector<std::pair<std::string, double>>>
+getNearestStations(double latitude, double longitude, int radius)
+{
+    std::string filename = std::format("{}{}", DATA_DIR_NAME, STATION_FILE_NAME);
+    auto nearestStations = std::make_unique<std::vector<std::pair<std::string, double>>>();
+    if (std::ifstream inStream{filename, std::ios::in}) {
+        auto stations = readStations(inStream);
+        auto nearest = calcNearestStations(stations, latitude, longitude, 50);
+        for (std::pair<int, double> p : *nearest) {
+            nearestStations->push_back(std::pair<std::string, double>(stations->at(p.first).getId(), p.second));
+        }
+    }
+    return nearestStations;
+}
+

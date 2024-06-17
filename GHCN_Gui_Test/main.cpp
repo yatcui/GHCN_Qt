@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(nearest_stations)
         auto stations = readStations(inStream);
         BOOST_CHECK_EQUAL(1124, stations->size());
         // (index, distance) pairs for stations within radius of 50 km around Fuerth.
-        auto nearestStations = getNearestStations(stations, latitude, longitude, 50);
+        auto nearestStations = calcNearestStations(stations, latitude, longitude, 50);
         std::pair<int, double> top = nearestStations->at(0);
         Station nearest = stations->at(top.first);
         BOOST_CHECK_EQUAL("GME00122614", nearest.getId());
@@ -62,6 +62,23 @@ BOOST_AUTO_TEST_CASE(nearest_stations)
         std::string msg = std::format("Opening {} failed", filename);
         BOOST_FAIL(msg);
     }
+}
+
+BOOST_AUTO_TEST_CASE(api_nearest_stations)
+{
+    // Fuerth
+    double latitude = 49.47020;
+    double longitude = 10.99019;
+    int radius = 50;
+    std::string station_file_name{STATION_FILE_NAME};
+    STATION_FILE_NAME = "ghcnd-stations_gm.txt";
+    auto nearestStations = getNearestStations(latitude, longitude, radius);
+    BOOST_CHECK_EQUAL("GME00122614", nearestStations->at(0).first);
+    BOOST_CHECK_EQUAL("2.2", std::format("{:.1f}", nearestStations->at(0).second));
+    // for (std::pair<std::string, double> p : *nearestStations) {
+    //     std::cout << std::format("{} at {:.1f} km\n", p.first, p.second);
+    // }
+    STATION_FILE_NAME = station_file_name;
 }
 
 BOOST_AUTO_TEST_CASE(distance_on_earth)
