@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <span>
+#include <utility>
 
 #include "measurement.hpp"
 #include "station.hpp"
@@ -47,11 +48,28 @@ public:
     getNearestStations(double latitude, double longitude, int radius);
 
 private:
+
     const std::string m_dataDirName;
     const std::string m_stationFileName;
     const std::string m_csvExt;
 
-private:
+    class MeasurementsCacheEntry
+    {
+        MeasurementsCacheEntry(const std::string& stationId,
+                               const std::string& date,
+                               std::unique_ptr<std::vector<Measurement>>& measurements)
+            : m_stationId(stationId), m_date(date)
+        {
+            m_measurements = std::move(measurements);
+        };
+
+    public:
+        const std::string m_stationId;
+        const std::string m_date;
+        std::unique_ptr<std::vector<Measurement>> m_measurements;
+    };
+
+    std::map<std::string, MeasurementsCacheEntry> m_MeasurementsCache;
 
     std::unique_ptr<std::vector<Station>>
     readStations(std::ifstream& inStream);
@@ -66,7 +84,7 @@ private:
     csvFilenameFromStationId(const std::string& station_id);
 
     std::unique_ptr<std::vector<Measurement>>
-    readMeasurementsForStation(std::ifstream& inStream);
+    readMeasurementsForStation(const std::string& stationId);
 
     std::span<const Measurement>
     calcMeasurementSpanForYearRange(const std::unique_ptr<std::vector<Measurement>>& measurements, int startYear, int endYear);
