@@ -109,15 +109,19 @@ DataProvider::calcNearestStations(const std::unique_ptr<std::vector<Station>>& s
 }
 
 
-std::unique_ptr<std::vector<Measurement>>
+void
 DataProvider::readMeasurementsForStation(const std::string& stationId)
 {
+    if (m_MeasurementsCache.contains(stationId)) {
+        return;
+    }
     std::string filename = csvFilenameFromStationId(stationId);
     if (filename.size() == 0) {
-        return std::make_unique<std::vector<Measurement>>();
+        return;
     }
     if (std::ifstream inStream{filename, std::ios::in}) {
-        auto measurements = std::make_unique<std::vector<Measurement>>();
+        m_MeasurementsCache.try_emplace(stationId, std::make_unique<std::vector<Measurement>>());
+        std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
         std::string line;
         std::smatch match;
         // Matches at least one subexpression "everything but comma" to the left.
@@ -140,9 +144,6 @@ DataProvider::readMeasurementsForStation(const std::string& stationId)
             measurements->push_back(Measurement(date, value, element));
         }
         inStream.close();
-        return measurements;
-    } else {
-        return std::make_unique<std::vector<Measurement>>();
     }
 }
 
@@ -208,7 +209,8 @@ DataProvider::csvFilenameFromStationId(const std::string& station_id)
 std::unique_ptr<std::map<int, float>>
 DataProvider::getYearlyAverages(const std::string& stationId, int startYear, int endYear, const MeasurementType& type)
 {
-    auto measurements = readMeasurementsForStation(stationId);
+    readMeasurementsForStation(stationId);
+    const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
     auto interval = calcMeasurementSpanForYearRange(measurements, startYear, endYear);
     auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
     float scaling = Measurement::getScalingForType(type);
@@ -234,7 +236,8 @@ DataProvider::getYearlyAverages(const std::string& stationId, int startYear, int
 std::unique_ptr<std::map<int, float>>
 DataProvider::getMonthlyAverages(const std::string& stationId, int year, const MeasurementType& type)
 {
-    auto measurements = readMeasurementsForStation(stationId);
+    readMeasurementsForStation(stationId);
+    const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
     auto interval = calcMeasurementSpanForYearRange(measurements, year, year);
     auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
     float scaling = Measurement::getScalingForType(type);
@@ -264,7 +267,8 @@ DataProvider::getMonthlyAverages(const std::string& stationId, int year, const M
 std::unique_ptr<std::map<int, float>>
 DataProvider::getDailyValues(const std::string& stationId, int year, int month, const MeasurementType& type)
 {
-    auto measurements = readMeasurementsForStation(stationId);
+    readMeasurementsForStation(stationId);
+    const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
     auto interval = calcMeasurementSpanForYearRange(measurements, year, year);
     auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
     float scaling = Measurement::getScalingForType(type);

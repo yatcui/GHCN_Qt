@@ -53,23 +53,7 @@ private:
     const std::string m_stationFileName;
     const std::string m_csvExt;
 
-    class MeasurementsCacheEntry
-    {
-        MeasurementsCacheEntry(const std::string& stationId,
-                               const std::string& date,
-                               std::unique_ptr<std::vector<Measurement>>& measurements)
-            : m_stationId(stationId), m_date(date)
-        {
-            m_measurements = std::move(measurements);
-        };
-
-    public:
-        const std::string m_stationId;
-        const std::string m_date;
-        std::unique_ptr<std::vector<Measurement>> m_measurements;
-    };
-
-    std::map<std::string, MeasurementsCacheEntry> m_MeasurementsCache;
+    std::map<std::string, std::unique_ptr<std::vector<Measurement>>> m_MeasurementsCache;
 
     std::unique_ptr<std::vector<Station>>
     readStations(std::ifstream& inStream);
@@ -83,7 +67,7 @@ private:
     const std::string
     csvFilenameFromStationId(const std::string& station_id);
 
-    std::unique_ptr<std::vector<Measurement>>
+    void
     readMeasurementsForStation(const std::string& stationId);
 
     std::span<const Measurement>
