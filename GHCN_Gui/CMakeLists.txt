@@ -29,7 +29,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         dockwidget.h dockwidget.cpp dockwidget.ui
-        measurement.hpp measurement.cpp ghcn_dataprovider.hpp
+        measurement.hpp measurement.cpp dataprovider.hpp
         qcustomplot.cpp qcustomplot.h
         station.hpp
         station.cpp

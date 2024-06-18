@@ -6,7 +6,7 @@
 #define BOOST_TEST_MODULE GHCN_Gui_Test
 #include <boost/test/included/unit_test.hpp>
 
-#include "ghcn_dataprovider.hpp"
+#include "dataprovider.hpp"
 
 BOOST_AUTO_TEST_SUITE(public_api)
 
