@@ -219,6 +219,7 @@ getYearlyAverages(const std::string& station_id, int startYear, int endYear, con
         return std::make_unique<std::map<int, float>>();
     }
 
+    // TODO: Caching
     if (std::ifstream inStream{filename, std::ios::in}) {
         auto measurements = readMeasurementsForStation(inStream);
         inStream.close();
@@ -226,7 +227,7 @@ getYearlyAverages(const std::string& station_id, int startYear, int endYear, con
         auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
         float scaling = Measurement::getScalingForType(type);
 
-        // map sorts entries in ascending order based on key (which is the year here).
+        // map keeps entries in ascending order based on key (which is the year here).
         auto yearlyAverages = std::make_unique<std::map<int, float>>();
         auto it = filtered_interval.begin();
         while (it != filtered_interval.end()) {
