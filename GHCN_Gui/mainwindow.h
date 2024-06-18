@@ -1,10 +1,12 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "measurement.hpp"
 #include <QMainWindow>
 
 #include "qcustomplot.h"
+
+#include "dataprovider.hpp"
+#include "measurement.hpp"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -20,6 +22,9 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+
+private:
+    DataProvider m_dataProvider;  // Data model
 
 private slots:
     void showPointValue(QMouseEvent*);

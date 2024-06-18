@@ -8,7 +8,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(GHCN_Gui_Test test_main.cpp
-    ../GHCN_Gui/ghcn_dataprovider.hpp   ../GHCN_Gui/station.cpp ../GHCN_Gui/station.hpp
+    ../GHCN_Gui/dataprovider.hpp
+    ../GHCN_Gui/dataprovider.cpp
+    ../GHCN_Gui/station.hpp
+    ../GHCN_Gui/station.cpp
     ../GHCN_Gui/measurement.hpp
     ../GHCN_Gui/measurement.cpp
 )

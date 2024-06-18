@@ -1,4 +1,3 @@
-#include <string>
 #include <algorithm>
 #include <cmath>
 
@@ -15,8 +14,7 @@
 
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+    : QMainWindow(parent), m_dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv"), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     this->customPlot = ui->plt_yearspan;
@@ -122,7 +120,7 @@ void MainWindow::on_cmb_stations_textActivated(const QString &stationId)
 
 void MainWindow::loadChart(const QString &stationId, int startYear, int endYear, MeasurementType type, const QString &graphName)
 {
-    auto yearlyAverages = getYearlyAverages(stationId.toStdString(), startYear, endYear, type);
+    auto yearlyAverages = m_dataProvider.getYearlyAverages(stationId.toStdString(), startYear, endYear, type);
     if (yearlyAverages->size() == 0) {
         // TODO: Message
         return;

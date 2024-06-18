@@ -33,6 +33,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         qcustomplot.cpp qcustomplot.h
         station.hpp
         station.cpp
+        dataprovider.cpp
 
 
     )
