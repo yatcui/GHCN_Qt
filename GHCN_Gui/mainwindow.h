@@ -30,14 +30,16 @@ private slots:
     void showPointValue(QMouseEvent*);
     void onPlottableClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
 
+    // Slots for UI elements are connected by name given in Designer.
     void on_btn_startsearch_clicked();
-    void on_cmb_stations_textActivated(const QString &arg1);
+    void on_cmb_stations_textActivated(const QString& selection);
+    void on_chk_tmax_year_stateChanged(int);
 
 private:
     Ui::MainWindow *ui;
     QCustomPlot *customPlot;
     QCPItemTracer *yearTracer;
-    void loadChart(const std::string& stationId, int startYear, int endYear, MeasurementType type, const QString &graphName);
+    void addGraph(const std::string& stationId, int startYear, int endYear, MeasurementType type, const QString& graphName);
 };
 
 #endif // MAINWINDOW_H

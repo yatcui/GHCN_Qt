@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <format>
+#include <cctype>  // toupper
 
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
@@ -62,11 +63,16 @@ void MainWindow::showPointValue( QMouseEvent* event )
     // Answer to: "How to get the point under the mouse in a graph"
     // December 22, 2017, 09:08 by santa
 
-    if (this->customPlot->graphCount() == 0) {
+    // Get visible graph.
+    QCPGraph *graph = nullptr;
+    for (int i = 0; i < this->customPlot->graphCount(); ++i) {
+        if (this->customPlot->graph(i)->realVisibility()) {
+            graph = this->customPlot->graph(i);
+        }
+    }
+    if (graph == nullptr) {
         return;
     }
-
-    QCPGraph *graph = this->customPlot->graph(0);
 
     // Get selected graph (in my case selected means the plot is selected from the legend)
     /*
@@ -105,7 +111,7 @@ void MainWindow::on_btn_startsearch_clicked()
 }
 
 
-void MainWindow::on_cmb_stations_textActivated(const QString &stationId)
+void MainWindow::on_cmb_stations_textActivated(const QString& selection)
 {
     // Retrieve arguments for loadChart from GUI
     int startYear = ui->spb_startyear->value();
@@ -115,14 +121,31 @@ void MainWindow::on_cmb_stations_textActivated(const QString &stationId)
     this->customPlot->clearGraphs();
     this->statusBar()->clearMessage();
 
-    QString graphName = stationId;
-    // TODO: get MeasurementType(s) from GUI
-    graphName.prepend("TMAX ");
-    loadChart(stationId.toStdString(), startYear, endYear, MeasurementType::TMAX, graphName);
+    for (QCheckBox* checkBox : this->ui->grp_plots->findChildren<QCheckBox*>()) {
+        // qDebug() << checkBox->objectName();
+        if (checkBox->isChecked()) {
+            const std::string name{checkBox->objectName().toStdString()};
+            std::string type{name.substr(4, 4)};  // Measurement type encoded in component name, e. g. chk_max_year
+            std::transform(type.begin(), type.end(), type.begin(), ::toupper);
+            const std::string graphName = std::format("{} {}", type, selection.toStdString());
+            qDebug() << graphName << " " << type;
+            MeasurementType mtype = Measurement::s_mapStringMeasurementType[type];
+            addGraph(selection.toStdString(), startYear, endYear, mtype, graphName.c_str());
+        }
+    }
+    this->customPlot->xAxis->setLabel("year");
+    this->customPlot->yAxis->setLabel("°C");
+    this->customPlot->xAxis->setRange(startYear - 1, endYear + 1);
+    this->customPlot->yAxis->rescale();
+    auto yRange = this->customPlot->yAxis->range();
+    // Rescale y-axis to have some margin on bottom and top.
+    this->customPlot->yAxis->setRange(std::floor(yRange.lower - 1), std::floor(yRange.upper + 1));
+    this->customPlot->replot();
+    this->customPlot->show();
 }
 
 
-void MainWindow::loadChart(const std::string& stationId, int startYear, int endYear, MeasurementType type, const QString &graphName)
+void MainWindow::addGraph(const std::string& stationId, int startYear, int endYear, MeasurementType type, const QString& graphName)
 {
     auto yearlyAverages = m_dataProvider.getYearlyAverages(stationId, startYear, endYear, type);
     if (yearlyAverages->empty()) {
@@ -136,11 +159,18 @@ void MainWindow::loadChart(const std::string& stationId, int startYear, int endY
         x.append(pair.first);
         y.append(pair.second);
     }
-    double y_max = *std::max_element(y.begin(), y.end());
-    double y_min = *std::min_element(y.begin(), y.end());
 
-    this->customPlot->addGraph();
-    QCPGraph * graph = this->customPlot->graph();
+    QCPGraph * graph = nullptr;
+    for (int i = 0; i < this->customPlot->graphCount(); ++i) {
+        if (this->customPlot->graph(i)->name() == graphName) {
+            graph = this->customPlot->graph(i);
+            graph->setVisible(true);
+        }
+    }
+    if (graph == nullptr) {
+        this->customPlot->addGraph();
+        graph = this->customPlot->graph();
+    }
     graph->setData(x, y, true);
     graph->setName(graphName);
 
@@ -148,14 +178,12 @@ void MainWindow::loadChart(const std::string& stationId, int startYear, int endY
     QPen pen = graph->pen();
     graph->selectionDecorator()->setPen(pen);
 
-    this->customPlot->xAxis->setLabel("year");
-    this->customPlot->yAxis->setLabel("°C");
-    this->customPlot->xAxis->setRange(startYear - 1, endYear + 1);
-    this->customPlot->yAxis->setRange(std::floor(y_min - 1), std::floor(y_max + 1));
-
     // Data points as filled circles.
     graph->setScatterStyle(QCPScatterStyle::ssDisc);
-
-    this->customPlot->replot();
-    this->customPlot->show();
 }
+
+void MainWindow::on_chk_tmax_year_stateChanged(int state)
+{
+    qDebug() << std::format("Year max state: {}", state);
+}
+
