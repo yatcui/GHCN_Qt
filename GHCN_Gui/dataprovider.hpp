@@ -67,7 +67,7 @@ private:
     const std::string
     csvFilenameFromStationId(const std::string& station_id);
 
-    void
+    bool
     readMeasurementsForStation(const std::string& stationId);
 
     std::span<const Measurement>

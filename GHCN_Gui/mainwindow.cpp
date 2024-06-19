@@ -112,8 +112,10 @@ void MainWindow::on_cmb_stations_textActivated(const QString &stationId)
     int endYear = ui->spb_endyear->value();
 
     this->customPlot->hide();
+    this->statusBar()->clearMessage();
 
     QString graphName = stationId;
+    // TODO: get MeasurementType(s) from GUI
     graphName.prepend("TMAX ");
     loadChart(stationId.toStdString(), startYear, endYear, MeasurementType::TMAX, graphName);
 }
@@ -121,9 +123,8 @@ void MainWindow::on_cmb_stations_textActivated(const QString &stationId)
 
 void MainWindow::loadChart(const std::string& stationId, int startYear, int endYear, MeasurementType type, const QString &graphName)
 {
-    this->statusBar()->clearMessage();
     auto yearlyAverages = m_dataProvider.getYearlyAverages(stationId, startYear, endYear, type);
-    if (yearlyAverages->size() == 0) {
+    if (yearlyAverages->empty()) {
         this->statusBar()->showMessage(std::format("No data for selected station {} available", stationId).c_str());
         // this->customPlot->show();
         return;

@@ -109,18 +109,23 @@ DataProvider::calcNearestStations(const std::unique_ptr<std::vector<Station>>& s
 }
 
 
-void
+bool
 DataProvider::readMeasurementsForStation(const std::string& stationId)
 {
     if (m_MeasurementsCache.contains(stationId)) {
-        return;
+        return true;
     }
     std::string filename = csvFilenameFromStationId(stationId);
-    if (filename.size() == 0) {
-        return;
+    if (filename.empty()) {
+        return false;
     }
+
+    // Note: ifstream is automatically closed when it goes out of scope.
+    // See: https://en.cppreference.com/w/cpp/io/basic_ifstream/close
+
     if (std::ifstream inStream{filename, std::ios::in}) {
-        m_MeasurementsCache.try_emplace(stationId, std::make_unique<std::vector<Measurement>>());
+        m_MeasurementsCache.try_emplace(stationId, std::make_unique<std::vector<Measurement>>());  // Inserts in-place
+        // Get a reference. We do *not* want a copy.
         std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
         std::string line;
         std::smatch match;
@@ -143,7 +148,14 @@ DataProvider::readMeasurementsForStation(const std::string& stationId)
             int value = stoi(match.str());
             measurements->push_back(Measurement(date, value, element));
         }
-        inStream.close();
+        if (measurements->empty()) {
+            return false;  // No measurements found
+        } else {
+            return true;
+        }
+    } else {
+        // File stream not valid.
+        return false;
     }
 }
 
@@ -212,14 +224,10 @@ DataProvider::getYearlyAverages(const std::string& stationId, int startYear, int
     // map keeps entries in ascending order based on key (which is the year here).
     auto yearlyAverages = std::make_unique<std::map<int, float>>();
 
-    readMeasurementsForStation(stationId);
-    if (!m_MeasurementsCache.contains(stationId)) {
-        return yearlyAverages;  // empty
+    if (!readMeasurementsForStation(stationId)) {
+        return yearlyAverages;  // empty map
     }
     const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
-    if (measurements->size() == 0) {
-        return yearlyAverages;  // empty
-    }
 
     auto interval = calcMeasurementSpanForYearRange(measurements, startYear, endYear);
     auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
@@ -247,14 +255,10 @@ DataProvider::getMonthlyAverages(const std::string& stationId, int year, const M
     // map keeps entries in ascending order based on key (which is the year here).
     auto monthlyAverages = std::make_unique<std::map<int, float>>();
 
-    readMeasurementsForStation(stationId);
-    if (!m_MeasurementsCache.contains(stationId)) {
-        return monthlyAverages;  // empty
+    if (!readMeasurementsForStation(stationId)) {
+        return monthlyAverages;  // empty map
     }
     const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
-    if (measurements->size() == 0) {
-        return monthlyAverages;  // empty
-    }
 
     auto interval = calcMeasurementSpanForYearRange(measurements, year, year);
     auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
@@ -287,14 +291,10 @@ DataProvider::getDailyValues(const std::string& stationId, int year, int month, 
     // map keeps entries in ascending order based on key (which is the year here).
     auto dailyValues = std::make_unique<std::map<int, float>>();
 
-    readMeasurementsForStation(stationId);
-    if (!m_MeasurementsCache.contains(stationId)) {
-        return dailyValues;  // empty
+    if (!readMeasurementsForStation(stationId)) {
+        return dailyValues;  // empty map
     }
     const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
-    if (measurements->size() == 0) {
-        return dailyValues;  // empty
-    }
 
     auto interval = calcMeasurementSpanForYearRange(measurements, year, year);
     auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
