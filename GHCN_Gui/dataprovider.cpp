@@ -209,14 +209,22 @@ DataProvider::csvFilenameFromStationId(const std::string& station_id)
 std::unique_ptr<std::map<int, float>>
 DataProvider::getYearlyAverages(const std::string& stationId, int startYear, int endYear, const MeasurementType& type)
 {
+    // map keeps entries in ascending order based on key (which is the year here).
+    auto yearlyAverages = std::make_unique<std::map<int, float>>();
+
     readMeasurementsForStation(stationId);
+    if (!m_MeasurementsCache.contains(stationId)) {
+        return yearlyAverages;  // empty
+    }
     const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
+    if (measurements->size() == 0) {
+        return yearlyAverages;  // empty
+    }
+
     auto interval = calcMeasurementSpanForYearRange(measurements, startYear, endYear);
     auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
     float scaling = Measurement::getScalingForType(type);
 
-    // map keeps entries in ascending order based on key (which is the year here).
-    auto yearlyAverages = std::make_unique<std::map<int, float>>();
     auto it = filtered_interval.begin();
     while (it != filtered_interval.end()) {
         int year{it->getYear()};
@@ -236,13 +244,22 @@ DataProvider::getYearlyAverages(const std::string& stationId, int startYear, int
 std::unique_ptr<std::map<int, float>>
 DataProvider::getMonthlyAverages(const std::string& stationId, int year, const MeasurementType& type)
 {
+    // map keeps entries in ascending order based on key (which is the year here).
+    auto monthlyAverages = std::make_unique<std::map<int, float>>();
+
     readMeasurementsForStation(stationId);
+    if (!m_MeasurementsCache.contains(stationId)) {
+        return monthlyAverages;  // empty
+    }
     const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
+    if (measurements->size() == 0) {
+        return monthlyAverages;  // empty
+    }
+
     auto interval = calcMeasurementSpanForYearRange(measurements, year, year);
     auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
     float scaling = Measurement::getScalingForType(type);
 
-    auto monthlyAverages = std::make_unique<std::map<int, float>>();
     // Start: Iterator to year.
     auto it = std::ranges::find_if(filtered_interval, [year](auto m) {return m.getYear() == year;});
     if (it == filtered_interval.end()) {
@@ -267,13 +284,22 @@ DataProvider::getMonthlyAverages(const std::string& stationId, int year, const M
 std::unique_ptr<std::map<int, float>>
 DataProvider::getDailyValues(const std::string& stationId, int year, int month, const MeasurementType& type)
 {
+    // map keeps entries in ascending order based on key (which is the year here).
+    auto dailyValues = std::make_unique<std::map<int, float>>();
+
     readMeasurementsForStation(stationId);
+    if (!m_MeasurementsCache.contains(stationId)) {
+        return dailyValues;  // empty
+    }
     const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
+    if (measurements->size() == 0) {
+        return dailyValues;  // empty
+    }
+
     auto interval = calcMeasurementSpanForYearRange(measurements, year, year);
     auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
     float scaling = Measurement::getScalingForType(type);
 
-    auto dailyValues = std::make_unique<std::map<int, float>>();
     // Determines iterator to year.
     auto it = std::ranges::find_if(filtered_interval, [year](auto m) {return m.getYear() == year;});
     if (it == filtered_interval.end()) {

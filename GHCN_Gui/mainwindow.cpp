@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <format>
 
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
@@ -114,15 +115,17 @@ void MainWindow::on_cmb_stations_textActivated(const QString &stationId)
 
     QString graphName = stationId;
     graphName.prepend("TMAX ");
-    loadChart(stationId, startYear, endYear, MeasurementType::TMAX, graphName);
+    loadChart(stationId.toStdString(), startYear, endYear, MeasurementType::TMAX, graphName);
 }
 
 
-void MainWindow::loadChart(const QString &stationId, int startYear, int endYear, MeasurementType type, const QString &graphName)
+void MainWindow::loadChart(const std::string& stationId, int startYear, int endYear, MeasurementType type, const QString &graphName)
 {
-    auto yearlyAverages = m_dataProvider.getYearlyAverages(stationId.toStdString(), startYear, endYear, type);
+    this->statusBar()->clearMessage();
+    auto yearlyAverages = m_dataProvider.getYearlyAverages(stationId, startYear, endYear, type);
     if (yearlyAverages->size() == 0) {
-        // TODO: Message
+        this->statusBar()->showMessage(std::format("No data for selected station {} available", stationId).c_str());
+        // this->customPlot->show();
         return;
     }
     QVector<double> x;

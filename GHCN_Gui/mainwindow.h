@@ -37,7 +37,7 @@ private:
     Ui::MainWindow *ui;
     QCustomPlot *customPlot;
     QCPItemTracer *yearTracer;
-    void loadChart(const QString &stationId, int startYear, int endYear, MeasurementType type, const QString &graphName);
+    void loadChart(const std::string& stationId, int startYear, int endYear, MeasurementType type, const QString &graphName);
 };
 
 #endif // MAINWINDOW_H

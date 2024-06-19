@@ -52,7 +52,7 @@
      <x>0</x>
      <y>0</y>
      <width>1200</width>
-     <height>22</height>
+     <height>17</height>
     </rect>
    </property>
   </widget>
@@ -246,6 +246,11 @@
           <item>
            <property name="text">
             <string>GM000004063</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>ZZ000000042</string>
            </property>
           </item>
          </widget>
