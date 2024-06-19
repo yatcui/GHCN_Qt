@@ -112,6 +112,7 @@ void MainWindow::on_cmb_stations_textActivated(const QString &stationId)
     int endYear = ui->spb_endyear->value();
 
     this->customPlot->hide();
+    this->customPlot->clearGraphs();
     this->statusBar()->clearMessage();
 
     QString graphName = stationId;
@@ -139,12 +140,13 @@ void MainWindow::loadChart(const std::string& stationId, int startYear, int endY
     double y_min = *std::min_element(y.begin(), y.end());
 
     this->customPlot->addGraph();
-    this->customPlot->graph(0)->setData(x, y, true);
-    this->customPlot->graph(0)->setName(graphName);
+    QCPGraph * graph = this->customPlot->graph();
+    graph->setData(x, y, true);
+    graph->setName(graphName);
 
     // Do *not* indicate selection of graph by different pen.
-    QPen pen = this->customPlot->graph(0)->pen();
-    this->customPlot->graph(0)->selectionDecorator()->setPen(pen);
+    QPen pen = graph->pen();
+    graph->selectionDecorator()->setPen(pen);
 
     this->customPlot->xAxis->setLabel("year");
     this->customPlot->yAxis->setLabel("°C");
@@ -152,7 +154,7 @@ void MainWindow::loadChart(const std::string& stationId, int startYear, int endY
     this->customPlot->yAxis->setRange(std::floor(y_min - 1), std::floor(y_max + 1));
 
     // Data points as filled circles.
-    this->customPlot->graph(0)->setScatterStyle(QCPScatterStyle::ssDisc);
+    graph->setScatterStyle(QCPScatterStyle::ssDisc);
 
     this->customPlot->replot();
     this->customPlot->show();
