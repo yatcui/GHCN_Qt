@@ -23,12 +23,11 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-private:
-    DataProvider m_dataProvider;  // Data model
-
 private slots:
     void showPointValue(QMouseEvent*);
     void onPlottableClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
+    void onPlottableDoubleClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
+    void onSelectionChangedByUser();
 
     // Slots for UI elements are connected by name given in Designer.
     void on_btn_startsearch_clicked();
@@ -39,6 +38,9 @@ private:
     Ui::MainWindow *ui;
     QCustomPlot *customPlot;
     QCPItemTracer *yearTracer;
+
+    DataProvider m_dataProvider;  // Data model for wheather data
+
     void addGraph(const std::string& stationId, int startYear, int endYear, MeasurementType type, const QString& graphName);
 };
 

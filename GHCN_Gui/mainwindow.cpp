@@ -16,16 +16,26 @@
 
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), m_dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv"), ui(new Ui::MainWindow)
+    : QMainWindow(parent), ui(new Ui::MainWindow), m_dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv")
 {
     ui->setupUi(this);
+
+    ui->chk_tmax_year->setChecked(true);
+    ui->chk_tmin_year->setChecked(true);
+
     this->customPlot = ui->plt_yearspan;
     this->customPlot->setInteractions(QCP::iSelectPlottables);
+    // this->customPlot->legend->setVisible(true);
 
     connect(this->customPlot, SIGNAL(plottableClick(QCPAbstractPlottable*, int, QMouseEvent*)),
             this, SLOT(onPlottableClick(QCPAbstractPlottable*, int, QMouseEvent*)));
 
+    connect(this->customPlot, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*, int, QMouseEvent*)),
+            this, SLOT(onPlottableDoubleClick(QCPAbstractPlottable*, int, QMouseEvent*)));
+
     connect(this->customPlot, SIGNAL(mouseMove(QMouseEvent*)), this, SLOT(showPointValue(QMouseEvent*)));
+
+    connect(this->customPlot, SIGNAL(selectionChangedByUser()), this, SLOT(onSelectionChangedByUser()));
 
     // Add the year tracer (red circle) which sticks to the graph data:
     this->yearTracer = new QCPItemTracer(this->customPlot);
@@ -51,46 +61,51 @@ MainWindow::~MainWindow()
 
 void MainWindow::onPlottableClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
 {
+    if (typeid(*plottable) == typeid(QCPGraph)) {
+        qDebug() << "Start tracer for graph" << plottable->name();
+        this->showPointValue(event);  // Start tracer
+    }
+}
+
+
+void MainWindow::onSelectionChangedByUser()
+{
+    if (this->customPlot->selectedGraphs().isEmpty()) {
+        this->yearTracer->setGraph(nullptr);  // De-register graph (if any) from tracer
+        this->yearTracer->setVisible(false);
+        this->customPlot->replot();
+    }
+}
+
+void MainWindow::onPlottableDoubleClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
+{
     double x = plottable->interface1D()->dataMainKey(dataIndex);
     double y = plottable->interface1D()->dataMainValue(dataIndex);
     qDebug() << "Nearest measurement point at (" << x << ", " << y << ")";
 }
 
 
-void MainWindow::showPointValue( QMouseEvent* event )
+void MainWindow::showPointValue(QMouseEvent* event)
 {
-    // Taken from QCustomPlot support forum at https://www.qcustomplot.com/index.php/support/forum
+    // Inspired by:
+    // QCustomPlot support forum at https://www.qcustomplot.com/index.php/support/forum
     // Answer to: "How to get the point under the mouse in a graph"
     // December 22, 2017, 09:08 by santa
 
-    // Get visible graph.
-    QCPGraph *graph = nullptr;
-    for (int i = 0; i < this->customPlot->graphCount(); ++i) {
-        if (this->customPlot->graph(i)->realVisibility()) {
-            graph = this->customPlot->graph(i);
-        }
-    }
-    if (graph == nullptr) {
+    // Get selected graph
+    QList selectedGraphs = this->customPlot->selectedGraphs();
+    if (selectedGraphs.size() != 1) {  // Make sure only single graph can be traced
         return;
     }
+    QCPGraph * graph = selectedGraphs.first();
 
-    // Get selected graph (in my case selected means the plot is selected from the legend)
-    /*
-    for (int i=0; i<this->this->customPlot->graphCount(); ++i)
-    {
-        if( this->this->customPlot->legend->itemWithPlottable(this->customPlot->graph(i))->selected() )
-        {
-            graph = this->this->customPlot->graph(i);
-            break;
-        }
-    }
-    */
-    // Setup the item tracer
+     // Setup the item tracer
     this->yearTracer->setGraph(graph);
     this->yearTracer->setGraphKey(this->customPlot->xAxis->pixelToCoord(event->pos().x()));
+    this->yearTracer->setVisible(true);
     this->customPlot->replot();
 
-    // **********Get the values from the item tracer's coords***********
+    // Get the values from the tracer's coords
     QPointF temp = this->yearTracer->position->coords();
 
     // Show a tooltip which tells the values
@@ -100,7 +115,7 @@ void MainWindow::showPointValue( QMouseEvent* event )
                           "<tr>"
                           "<td><h5>X: %L2</h5></td>" "<td>  ,  </td>" "<td><h5>Y: %L3</h5></td>"
                           "</tr>"
-                          "</table>").arg(graph->name(), QString::number( temp.x(), 'f', 0 ), QString::number( temp.y(), 'f', 1 )),
+                          "</table>").arg(graph->name(), QString::number(temp.x(), 'f', 0), QString::number(temp.y(), 'f', 1)),
                        this->customPlot, this->customPlot->rect());
 }
 
@@ -118,6 +133,8 @@ void MainWindow::on_cmb_stations_textActivated(const QString& selection)
     int endYear = ui->spb_endyear->value();
 
     this->customPlot->hide();
+    this->yearTracer->setGraph(nullptr);
+    this->yearTracer->setVisible(false);
     this->customPlot->clearGraphs();
     this->statusBar()->clearMessage();
 
@@ -125,17 +142,17 @@ void MainWindow::on_cmb_stations_textActivated(const QString& selection)
         // qDebug() << checkBox->objectName();
         if (checkBox->isChecked()) {
             const std::string name{checkBox->objectName().toStdString()};
-            std::string type{name.substr(4, 4)};  // Measurement type encoded in component name, e. g. chk_max_year
-            std::transform(type.begin(), type.end(), type.begin(), ::toupper);
-            const std::string graphName = std::format("{} {}", type, selection.toStdString());
-            qDebug() << graphName << " " << type;
-            MeasurementType mtype = Measurement::s_mapStringMeasurementType[type];
+            std::string mtypeName{name.substr(4, 4)};   // Measurement type name encoded in component name, e. g. chk_tmax_year.
+            std::transform(mtypeName.begin(), mtypeName.end(), mtypeName.begin(), ::toupper);  // Name must be in upper case.
+            const std::string graphName = std::format("{} {}", mtypeName, selection.toStdString());
+            // qDebug() << graphName << " " << type;
+            MeasurementType mtype = Measurement::s_mapStringMeasurementType[mtypeName];
             addGraph(selection.toStdString(), startYear, endYear, mtype, graphName.c_str());
         }
     }
     this->customPlot->xAxis->setLabel("year");
     this->customPlot->yAxis->setLabel("°C");
-    this->customPlot->xAxis->setRange(startYear - 1, endYear + 1);
+    this->customPlot->xAxis->setRange(startYear - 1, endYear + 1);  // Some margin to left and right.
     this->customPlot->yAxis->rescale();
     auto yRange = this->customPlot->yAxis->range();
     // Rescale y-axis to have some margin on bottom and top.
@@ -150,7 +167,7 @@ void MainWindow::addGraph(const std::string& stationId, int startYear, int endYe
     auto yearlyAverages = m_dataProvider.getYearlyAverages(stationId, startYear, endYear, type);
     if (yearlyAverages->empty()) {
         this->statusBar()->showMessage(std::format("No data for selected station {} available", stationId).c_str());
-        // this->customPlot->show();
+        // this->customPlot->show();  // Show previous plot.
         return;
     }
     QVector<double> x;
@@ -175,8 +192,8 @@ void MainWindow::addGraph(const std::string& stationId, int startYear, int endYe
     graph->setName(graphName);
 
     // Do *not* indicate selection of graph by different pen.
-    QPen pen = graph->pen();
-    graph->selectionDecorator()->setPen(pen);
+    // QPen pen = graph->pen();
+    // graph->selectionDecorator()->setPen(pen);
 
     // Data points as filled circles.
     graph->setScatterStyle(QCPScatterStyle::ssDisc);
