@@ -204,3 +204,8 @@ void MainWindow::on_chk_tmax_year_stateChanged(int state)
     qDebug() << std::format("Year max state: {}", state);
 }
 
+void MainWindow::on_chk_tmax_winter_stateChanged(int state)
+{
+
+}
+

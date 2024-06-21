@@ -32,7 +32,8 @@ private slots:
     // Slots for UI elements are connected by name given in Designer.
     void on_btn_startsearch_clicked();
     void on_cmb_stations_textActivated(const QString& selection);
-    void on_chk_tmax_year_stateChanged(int);
+    void on_chk_tmax_year_stateChanged(int state);
+    void on_chk_tmax_winter_stateChanged(int state);
 
 private:
     Ui::MainWindow *ui;

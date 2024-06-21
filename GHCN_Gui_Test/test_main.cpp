@@ -37,6 +37,35 @@ BOOST_AUTO_TEST_CASE(api_yearly_averages)
     // for (auto p : *yearlyAverages) {
     //     std::cout << std::format("{} {:.1f}\n", p.first, p.second);
     // }
+
+    auto yearlyAverages_1_12 = dataProvider.getAveragesForMonthRange(stationId, 1960, 2000, 1, 12, MeasurementType::TMAX);
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages)[1960]), "13.5");
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages)[2000]), "14.7");
+}
+
+BOOST_AUTO_TEST_CASE(api_yearly_averages_month_span)
+{
+    const std::string stationId{"GME00102380"};
+
+    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv");
+
+    auto yearlyAverages_12_2 = dataProvider.getAveragesForMonthRange(stationId, 1960, 2000, 12, 2, MeasurementType::TMAX);
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages_12_2)[1960]), "3.8");
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages_12_2)[1963]), "-2.2");
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages_12_2)[2000]), "4.8");
+
+    auto yearlyAverages_3_5 = dataProvider.getAveragesForMonthRange(stationId, 1960, 2000, 3, 5, MeasurementType::TMAX);
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages_3_5)[1960]), "14.6");
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages_3_5)[2000]), "15.8");
+
+    auto yearlyAverages_6_8 = dataProvider.getAveragesForMonthRange(stationId, 1960, 2000, 6, 8, MeasurementType::TMAX);
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages_6_8)[1960]), "22.3");
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages_6_8)[2000]), "23.2");
+
+    auto yearlyAverages_9_11 = dataProvider.getAveragesForMonthRange(stationId, 1960, 2000, 9, 11, MeasurementType::TMAX);
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages_9_11)[1960]), "14.0");
+    BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages_9_11)[2000]), "14.5");
+
 }
 
 BOOST_AUTO_TEST_CASE(api_montly_averages)

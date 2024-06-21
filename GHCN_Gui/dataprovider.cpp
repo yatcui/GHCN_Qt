@@ -168,13 +168,13 @@ DataProvider::calcMeasurementSpanForYearRange(const std::unique_ptr<std::vector<
     // Determines iterator to start year.
     auto startIter = std::ranges::find_if(data, [startYear](auto m) {return m.getYear() == startYear;});
     if (startIter == data.end()) {
-        // End year not found => return empty span.
+        // Start year not found => return empty span.
         return std::span<Measurement>();
     }
 
-    // Determines iterator to end year.
+    // Determines iterator to end year. Reverse search from end.
     auto it = std::ranges::find_if(data | std::ranges::views::reverse, [endYear](auto m) {return m.getYear() == endYear;});
-    auto endIter = data.end();  // Reverse search from end.
+    auto endIter = data.end(); // Initialize with reasonable value
     if (it != data.rend()) { 
         endIter = std::next(it).base();  // Get forward iterator to end of span.
     }
@@ -225,11 +225,14 @@ DataProvider::getYearlyAverages(const std::string& stationId, int startYear, int
     auto yearlyAverages = std::make_unique<std::map<int, float>>();
 
     if (!readMeasurementsForStation(stationId)) {
-        return yearlyAverages;  // empty map
+        return yearlyAverages;  // => empty map
     }
     const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
 
     auto interval = calcMeasurementSpanForYearRange(measurements, startYear, endYear);
+    if (interval.empty()) {
+        return yearlyAverages;  // => empty map
+    }
     auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
     float scaling = Measurement::getScalingForType(type);
 
@@ -240,10 +243,86 @@ DataProvider::getYearlyAverages(const std::string& stationId, int startYear, int
         auto last = std::find_if(it, filtered_interval.end(), [year](const auto& m){return m.getYear() != year;});
         // Adds up measurement values and calculates average. Scaling before division to prevent rounding errors.
         float average = std::accumulate(it, last, 0, [](int sum, Measurement m){return sum + m.getValue();}) * scaling /
-                        (std::ranges::distance(it, last));
+                        (std::ranges::distance(it, last));  // distance can not be zero, as year exists.
         //std::cout << std::format("{} values in {}\n", std::ranges::distance(it, last), year);
         (*yearlyAverages)[year] = average; // O(1) for unordered_map, O(log n) for ordered map.
         it = last;
+    }
+    return yearlyAverages;
+}
+
+
+std::unique_ptr<std::map<int, float>>
+DataProvider::getAveragesForMonthRange(const std::string& stationId, int startYear, int endYear, int startMonth, int endMonth, const MeasurementType& type)
+{
+    // map keeps entries in ascending order based on key (which is the year here).
+    auto yearlyAverages = std::make_unique<std::map<int, float>>();
+
+    if (!readMeasurementsForStation(stationId)) {
+        return yearlyAverages;  // no data at all => empty map
+    }
+    const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
+
+    auto interval = calcMeasurementSpanForYearRange(measurements, (startMonth <= endMonth ? startYear : startYear - 1), endYear);
+    if (interval.empty()) {
+        return yearlyAverages;  // no data for required range => empty map
+    }
+    auto filtered_interval{interval | std::views::filter([type](auto m) {return m.getType() == type;})};
+    float scaling = Measurement::getScalingForType(type);
+
+    auto it = filtered_interval.begin();
+    while (it != filtered_interval.end()) {
+        int year{it->getYear()};
+        // Points to first measurement for start month in current year.
+        auto first = std::find_if(it, filtered_interval.end(),
+                                  [year, startMonth](const auto& m)
+                                  {return m.getYear() == year && m.getMonth() == startMonth;});
+
+        if (first == filtered_interval.end()) {
+            // Required start month not found => advance to next available year.
+            it = std::find_if(it, filtered_interval.end(), [year](const auto& m){return m.getYear() != year;});
+            continue;
+        }
+        auto tmp = first;
+        if (startMonth > endMonth) {
+            // Continuation over year boudary => advance to *directly following* year.
+            tmp = std::find_if(first, filtered_interval.end(), [year](const auto& m){return m.getYear() != year;});
+
+            // Not found => advance to *next available* year.
+            if (tmp == filtered_interval.end() || tmp->getYear() != year + 1) {
+                it = std::find_if(it, filtered_interval.end(), [year](const auto& m){return m.getYear() != year;});
+                continue;
+            }
+            ++year;
+        }
+        // Points after last measurement for end month in current or following year.
+        auto last = std::find_if(tmp, filtered_interval.end(),
+                                 [year, endMonth](const auto& m)
+                                 {return m.getYear() != year || m.getMonth() > endMonth;});
+
+        // Special case: Last measurement satisfies conditions. TODO: Can this be solved by a reverse iterator?
+        bool lastElementMatches = filtered_interval.back().getYear() == year && filtered_interval.back().getMonth() == endMonth;
+
+        // Required end month not found => advance to next available year.
+        if (last == filtered_interval.end() && !(lastElementMatches)) {
+            it = std::find_if(it, filtered_interval.end(), [year](const auto& m){return m.getYear() != year;});
+            continue;
+        }
+        // Adds up measurement values and calculates average. Scaling before division to prevent rounding errors.
+        auto numElements = std::ranges::distance(first, last);
+        if (numElements > 0) {
+            float average = std::accumulate(first, last, 0,
+                                            [](int sum, Measurement m){return sum + m.getValue();}) * scaling / numElements;
+            // if (startMonth > endMonth) {
+            //     std::cout << std::format("{:04d}-{:02d}-{:02d} to ", first->getYear(), first->getMonth(), first->getDay());
+            //     std::cout << std::format("{:04d}-{:02d}-{:02d}: {:.4f}\n", last->getYear(), last->getMonth(), last->getDay(), average);
+            // }
+            (*yearlyAverages)[year] = average; // O(1) for unordered_map, O(log n) for ordered map.
+        }
+        // Advance iterator to next available year.
+        // Compare with previous year in case of continuation over year boundary (e. g. meterological winter in nothern hemisphere.
+        year = first->getYear();
+        it = std::find_if(last, filtered_interval.end(), [year](const auto& m){return m.getYear() != year;});
     }
     return yearlyAverages;
 }
@@ -256,7 +335,7 @@ DataProvider::getMonthlyAverages(const std::string& stationId, int year, const M
     auto monthlyAverages = std::make_unique<std::map<int, float>>();
 
     if (!readMeasurementsForStation(stationId)) {
-        return monthlyAverages;  // empty map
+        return monthlyAverages;  // => empty map
     }
     const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
 
@@ -276,7 +355,7 @@ DataProvider::getMonthlyAverages(const std::string& stationId, int year, const M
         int month{it->getMonth()};
         auto last_day = std::find_if(it, filtered_interval.end(), [month](const auto& m){return m.getMonth() != month;});
         float average = std::accumulate(it, last_day, 0, [](int sum, Measurement m){return sum + m.getValue();}) * scaling /
-                        (std::ranges::distance(it, last_day));
+                        (std::ranges::distance(it, last_day));  // distance can not be zero, as month exists.
         //std::cout << std::format("{} values in {}\n", std::ranges::distance(it, last_day), month);
         (*monthlyAverages)[month] = average;
         it = last_day;
@@ -292,7 +371,7 @@ DataProvider::getDailyValues(const std::string& stationId, int year, int month, 
     auto dailyValues = std::make_unique<std::map<int, float>>();
 
     if (!readMeasurementsForStation(stationId)) {
-        return dailyValues;  // empty map
+        return dailyValues;  // => empty map
     }
     const std::unique_ptr<std::vector<Measurement>>& measurements = m_MeasurementsCache[stationId];
 

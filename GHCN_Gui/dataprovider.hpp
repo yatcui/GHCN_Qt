@@ -29,6 +29,34 @@ WMO ID       81-85   Character
 ------------------------------
 */
 
+
+/*
+Meterological seasons:
+
+Northern | Southern | Start | End
+-----------------------------------------------------
+Winter   | Summer   | 1 Dec | 28 Feb (29 if leap year)
+Spring   | Autumn   | 1 Mar | 31 May
+Summer   | Winter   | 1 Jun | 31 Aug
+Autumn   | Spring   | 1 Sep | 30 Nov
+*/
+
+enum class Season
+{
+    WINTER,
+    SPRING,
+    SUMMER,
+    AUTUMN
+};
+
+
+enum class Hemisphere
+{
+    SOUTHERN,
+    NORTHERN
+};
+
+
 class DataProvider
 {
 public:
@@ -36,13 +64,16 @@ public:
     DataProvider(const std::string& dataDirName, const std::string& stationFileName, const std::string& csvExt);
 
     std::unique_ptr<std::map<int, float>>
-    getYearlyAverages(const std::string& station_id, int startYear, int endYear, const MeasurementType& type);
+    getYearlyAverages(const std::string& stationId, int startYear, int endYear, const MeasurementType& type);
 
     std::unique_ptr<std::map<int, float>>
-    getMonthlyAverages(const std::string& station_id, int year, const MeasurementType& type);
+    getAveragesForMonthRange(const std::string& stationId, int startYear, int endYear, int startMonth, int endMonth, const MeasurementType& type);
 
     std::unique_ptr<std::map<int, float>>
-    getDailyValues(const std::string& station_id, int year, int month, const MeasurementType& type);
+    getMonthlyAverages(const std::string& stationId, int year, const MeasurementType& type);
+
+    std::unique_ptr<std::map<int, float>>
+    getDailyValues(const std::string& stationId, int year, int month, const MeasurementType& type);
 
     std::unique_ptr<std::vector<std::pair<std::string, double>>>
     getNearestStations(double latitude, double longitude, int radius);
