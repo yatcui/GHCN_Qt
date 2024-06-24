@@ -30,10 +30,20 @@ private slots:
     void onSelectionChangedByUser();
 
     // Slots for UI elements are connected by name given in Designer.
-    void on_btn_startsearch_clicked();
-    void on_cmb_stations_textActivated(const QString& selection);
-    void on_chk_tmax_year_stateChanged(int state);
+
+    void on_chk_tmax_spring_stateChanged(int state);
+    void on_chk_tmin_spring_stateChanged(int state);
+    void on_chk_tmax_summer_stateChanged(int state);
+    void on_chk_tmin_summer_stateChanged(int state);
+    void on_chk_tmax_autumn_stateChanged(int state);
+    void on_chk_tmin_autumn_stateChanged(int state);
     void on_chk_tmax_winter_stateChanged(int state);
+    void on_chk_tmin_winter_stateChanged(int state);
+    void on_chk_tmax_year_stateChanged(int state);
+    void on_chk_tmin_year_stateChanged(int state);
+
+    void on_cmb_stations_textActivated(const QString& selection);
+    void on_btn_update_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -42,7 +52,11 @@ private:
 
     DataProvider m_dataProvider;  // Data model for wheather data
 
-    void addGraph(const std::string& stationId, int startYear, int endYear, MeasurementType type, const QString& graphName);
+    void addGraph(MeasurementType mType, Season season, const QString& graphName);
+    void hideGraph(const QString& graphName);
+    void updateGraphs();
+    void onStationSelectionChanged();
+    void onStationSearchTriggered();
 };
 
 #endif // MAINWINDOW_H

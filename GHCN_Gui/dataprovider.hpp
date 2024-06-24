@@ -46,7 +46,8 @@ enum class Season
     WINTER,
     SPRING,
     SUMMER,
-    AUTUMN
+    AUTUMN,
+    YEAR
 };
 
 

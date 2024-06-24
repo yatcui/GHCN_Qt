@@ -1,7 +1,5 @@
-#include <algorithm>
 #include <cmath>
 #include <format>
-#include <cctype>  // toupper
 
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
@@ -18,12 +16,12 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), m_dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv")
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
-    ui->chk_tmax_year->setChecked(true);
-    ui->chk_tmin_year->setChecked(true);
+    // this->ui->chk_tmax_year->setChecked(true);
+    // this->ui->chk_tmin_year->setChecked(true);
 
-    this->customPlot = ui->plt_yearspan;
+    this->customPlot = this->ui->plt_yearspan;  // "rename" to commonly used identifier
     this->customPlot->setInteractions(QCP::iSelectPlottables);
     // this->customPlot->legend->setVisible(true);
 
@@ -37,7 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(this->customPlot, SIGNAL(selectionChangedByUser()), this, SLOT(onSelectionChangedByUser()));
 
-    // Add the year tracer (red circle) which sticks to the graph data:
+    // Set up the year tracer (red circle) which sticks to the graph data:
     this->yearTracer = new QCPItemTracer(this->customPlot);
     this->yearTracer->setInterpolating(false);
     this->yearTracer->setStyle(QCPItemTracer::tsCircle);
@@ -45,8 +43,9 @@ MainWindow::MainWindow(QWidget *parent)
     this->yearTracer->setBrush(Qt::red);
     this->yearTracer->setSize(10);
 
+
     // TODO: How to show initially empty QCustomPlot widget? Make pens for all items transparent?
-    this->customPlot->hide();
+    this->customPlot->hide();   
 }
 
 
@@ -59,15 +58,6 @@ MainWindow::~MainWindow()
 }
 
 
-void MainWindow::onPlottableClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
-{
-    if (typeid(*plottable) == typeid(QCPGraph)) {
-        qDebug() << "Start tracer for graph" << plottable->name();
-        this->showPointValue(event);  // Start tracer
-    }
-}
-
-
 void MainWindow::onSelectionChangedByUser()
 {
     if (this->customPlot->selectedGraphs().isEmpty()) {
@@ -76,6 +66,16 @@ void MainWindow::onSelectionChangedByUser()
         this->customPlot->replot();
     }
 }
+
+
+void MainWindow::onPlottableClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
+{
+    if (typeid(*plottable) == typeid(QCPGraph)) {
+        qDebug() << "Start tracer for graph" << plottable->name();
+        this->showPointValue(event);  // Start tracer
+    }
+}
+
 
 void MainWindow::onPlottableDoubleClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
 {
@@ -120,51 +120,56 @@ void MainWindow::showPointValue(QMouseEvent* event)
 }
 
 
-void MainWindow::on_btn_startsearch_clicked()
+void MainWindow::addGraph(MeasurementType mType, Season season, const QString& graphName)
 {
+    const std::string stationId = this->ui->cmb_stations->currentText().toStdString();
+    int startYear = this->ui->spb_startyear->value();
+    int endYear = this->ui->spb_endyear->value();
+    double longitude = this->ui->spb_longitude->value();
+    int startMonth = -1;
+    int endMonth = -1;
 
-}
 
-
-void MainWindow::on_cmb_stations_textActivated(const QString& selection)
-{
-    // Retrieve arguments for loadChart from GUI
-    int startYear = ui->spb_startyear->value();
-    int endYear = ui->spb_endyear->value();
-
-    this->customPlot->hide();
-    this->yearTracer->setGraph(nullptr);
-    this->yearTracer->setVisible(false);
-    this->customPlot->clearGraphs();
-    this->statusBar()->clearMessage();
-
-    for (QCheckBox* checkBox : this->ui->grp_plots->findChildren<QCheckBox*>()) {
-        // qDebug() << checkBox->objectName();
-        if (checkBox->isChecked()) {
-            const std::string name{checkBox->objectName().toStdString()};
-            std::string mtypeName{name.substr(4, 4)};   // Measurement type name encoded in component name, e. g. chk_tmax_year.
-            std::transform(mtypeName.begin(), mtypeName.end(), mtypeName.begin(), ::toupper);  // Name must be in upper case.
-            const std::string graphName = std::format("{} {}", mtypeName, selection.toStdString());
-            // qDebug() << graphName << " " << type;
-            MeasurementType mtype = Measurement::s_mapStringMeasurementType[mtypeName];
-            addGraph(selection.toStdString(), startYear, endYear, mtype, graphName.c_str());
+    if (season == Season::SPRING) {
+        if (longitude > 0) {
+            startMonth = 3;
+            endMonth = 5;
+        } else {
+            startMonth = 9;
+            endMonth = 11;
         }
+    } else if (season == Season::SUMMER) {
+        if (longitude > 0) {
+            startMonth = 6;
+            endMonth = 8;
+        } else {
+            startMonth = 12;
+            endMonth = 2;
+        }
+    } else if (season == Season::AUTUMN) {
+        if (longitude > 0) {
+            startMonth = 9;
+            endMonth = 11;
+        } else {
+            startMonth = 3;
+            endMonth = 5;
+        }
+    } else if (season == Season::WINTER) {
+        if (longitude > 0) {
+            startMonth = 12;
+            endMonth = 2;
+        } else {
+            startMonth = 6;
+            endMonth = 8;
+        }
+    } else {  // Full year
+        startMonth = 1;
+        endMonth = 12;
     }
-    this->customPlot->xAxis->setLabel("year");
-    this->customPlot->yAxis->setLabel("°C");
-    this->customPlot->xAxis->setRange(startYear - 1, endYear + 1);  // Some margin to left and right.
-    this->customPlot->yAxis->rescale();
-    auto yRange = this->customPlot->yAxis->range();
-    // Rescale y-axis to have some margin on bottom and top.
-    this->customPlot->yAxis->setRange(std::floor(yRange.lower - 1), std::floor(yRange.upper + 1));
-    this->customPlot->replot();
-    this->customPlot->show();
-}
 
+    qDebug() << stationId << startYear << endYear << startMonth << endMonth;
 
-void MainWindow::addGraph(const std::string& stationId, int startYear, int endYear, MeasurementType type, const QString& graphName)
-{
-    auto yearlyAverages = m_dataProvider.getYearlyAverages(stationId, startYear, endYear, type);
+    auto yearlyAverages = m_dataProvider.getAveragesForMonthRange(stationId, startYear, endYear, startMonth, endMonth, mType);
     if (yearlyAverages->empty()) {
         this->statusBar()->showMessage(std::format("No data for selected station {} available", stationId).c_str());
         // this->customPlot->show();  // Show previous plot.
@@ -199,13 +204,177 @@ void MainWindow::addGraph(const std::string& stationId, int startYear, int endYe
     graph->setScatterStyle(QCPScatterStyle::ssDisc);
 }
 
-void MainWindow::on_chk_tmax_year_stateChanged(int state)
+
+void MainWindow::hideGraph(const QString& graphName) {
+
+    for (int i = 0; i < this->customPlot->graphCount(); ++i) {
+        if (this->customPlot->graph(i)->name() == graphName) {
+            this->customPlot->graph(i)->setVisible(false);
+            break;
+        }
+    }
+}
+
+
+void MainWindow::onStationSelectionChanged()
 {
-    qDebug() << std::format("Year max state: {}", state);
+    if (this->customPlot->selectedGraphs().isEmpty()) {
+        this->yearTracer->setGraph(nullptr);  // De-register graph (if any) from tracer
+        this->yearTracer->setVisible(false);
+        this->customPlot->replot();
+    }
+}
+
+
+void MainWindow::on_btn_update_clicked()
+{
+
+}
+
+
+void MainWindow::on_cmb_stations_textActivated(const QString& selection)
+{
+    this->updateGraphs();
+}
+
+
+
+void MainWindow::updateGraphs()
+{
+    this->customPlot->hide();
+    this->yearTracer->setGraph(nullptr);
+    this->yearTracer->setVisible(false);
+    this->customPlot->clearGraphs();
+    this->statusBar()->clearMessage();
+
+    if (this->ui->chk_tmax_spring->isChecked()) {
+        this->addGraph(MeasurementType::TMAX, Season::SPRING, "TMAX Spring");
+    } else {
+        this->hideGraph("TMAX Spring");
+    }
+
+    if (this->ui->chk_tmin_spring->isChecked()) {
+        this->addGraph(MeasurementType::TMIN, Season::SPRING, "TMIN Spring");
+    } else {
+        this->hideGraph("TMIN Spring");
+    }
+
+    if (this->ui->chk_tmax_summer->isChecked()) {
+        this->addGraph(MeasurementType::TMAX, Season::SUMMER, "TMAX Summer");
+    } else {
+        this->hideGraph("TMAX Summer");
+    }
+
+    if (this->ui->chk_tmin_summer->isChecked()) {
+        this->addGraph(MeasurementType::TMIN, Season::SUMMER, "TMIN Summer");
+    } else {
+        this->hideGraph("TMIN Summer");
+    }
+
+    if (this->ui->chk_tmax_summer->isChecked()) {
+        this->addGraph(MeasurementType::TMAX, Season::SUMMER, "TMAX Summer");
+    } else {
+        this->hideGraph("TMAX Summer");
+    }
+
+    if (this->ui->chk_tmax_autumn->isChecked()) {
+        this->addGraph(MeasurementType::TMAX, Season::AUTUMN, "TMAX Autumn");
+    } else {
+        this->hideGraph("TMAX Autumn");
+    }
+
+    if (this->ui->chk_tmin_autumn->isChecked()) {
+        this->addGraph(MeasurementType::TMIN, Season::AUTUMN, "TMIN Autumn");
+    } else {
+        this->hideGraph("TMIN Autumn");
+    }
+
+    if (this->ui->chk_tmax_winter->isChecked()) {
+        this->addGraph(MeasurementType::TMAX, Season::WINTER, "TMAX Winter");
+    } else {
+        this->hideGraph("TMAX Winter");
+    }
+
+    if (this->ui->chk_tmin_winter->isChecked()) {
+        this->addGraph(MeasurementType::TMIN, Season::WINTER, "TMIN Winter");
+    } else {
+        this->hideGraph("TMIN Winter");
+    }
+
+    if (this->ui->chk_tmax_year->isChecked()) {
+        this->addGraph(MeasurementType::TMAX, Season::YEAR, "TMAX Year");
+    } else {
+        this->hideGraph("TMAX Year");
+    }
+
+    if (this->ui->chk_tmin_year->isChecked()) {
+        this->addGraph(MeasurementType::TMIN, Season::YEAR, "TMIN Year");
+    } else {
+        this->hideGraph("TMIN Year");
+    }
+
+    int startYear = this->ui->spb_startyear->value();
+    int endYear = this->ui->spb_endyear->value();
+
+    this->customPlot->xAxis->setLabel("year");
+    this->customPlot->yAxis->setLabel("°C");
+    this->customPlot->xAxis->setRange(startYear - 1, endYear + 1);  // Some margin to left and right.
+    this->customPlot->yAxis->rescale();
+    auto yRange = this->customPlot->yAxis->range();
+    // Rescale y-axis to have some margin on bottom and top.
+    this->customPlot->yAxis->setRange(std::floor(yRange.lower - 1), std::floor(yRange.upper + 1));
+    this->customPlot->replot();
+    this->customPlot->show();
+}
+
+
+void MainWindow::on_chk_tmin_spring_stateChanged(int state)
+{
+    this->updateGraphs();
+}
+
+void MainWindow::on_chk_tmax_spring_stateChanged(int state)
+{
+    this->updateGraphs();
+}
+
+void MainWindow::on_chk_tmin_summer_stateChanged(int state)
+{
+    this->updateGraphs();
+}
+
+void MainWindow::on_chk_tmax_summer_stateChanged(int state)
+{
+    this->updateGraphs();
+}
+
+
+void MainWindow::on_chk_tmin_autumn_stateChanged(int state)
+{
+    this->updateGraphs();
+}
+
+void MainWindow::on_chk_tmax_autumn_stateChanged(int state)
+{
+    this->updateGraphs();
+}
+
+void MainWindow::on_chk_tmin_winter_stateChanged(int state)
+{
+    this->updateGraphs();
 }
 
 void MainWindow::on_chk_tmax_winter_stateChanged(int state)
 {
-
+    this->updateGraphs();
 }
 
+void MainWindow::on_chk_tmin_year_stateChanged(int state)
+{
+    this->updateGraphs();
+}
+
+void MainWindow::on_chk_tmax_year_stateChanged(int state)
+{
+    this->updateGraphs();
+}
