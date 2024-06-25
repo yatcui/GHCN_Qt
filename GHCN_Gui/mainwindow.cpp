@@ -35,13 +35,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(this->customPlot, SIGNAL(selectionChangedByUser()), this, SLOT(onSelectionChangedByUser()));
 
-    // Set up the year tracer (red circle) which sticks to the graph data:
+    // Set up the year tracer which sticks to the graph data:
     this->yearTracer = new QCPItemTracer(this->customPlot);
     this->yearTracer->setInterpolating(false);
-    this->yearTracer->setStyle(QCPItemTracer::tsCircle);
-    this->yearTracer->setPen(QPen(Qt::red));
-    this->yearTracer->setBrush(Qt::red);
-    this->yearTracer->setSize(10);
+    this->yearTracer->setStyle(QCPItemTracer::tsCrosshair);  // tsCircle: warning messages for NaN y values.
 
     // TODO: How to show initially empty QCustomPlot widget? Make pens for all items transparent?
     this->customPlot->hide();   
@@ -100,16 +97,10 @@ void MainWindow::showPointValue(QMouseEvent* event)
 
     // Get the values from the tracer's coords
     QPointF temp = this->yearTracer->position->coords();
-    if (std::isnan(temp.y())) {
-        // NaN is detected, but QPainterPath::arcTo warning is not prevented.
-        // Occurs when tracer goes from a valid value into a gap with NaN.
-        this->yearTracer->setStyle(QCPItemTracer::tsNone);
-    } else {
-        this->yearTracer->setStyle(QCPItemTracer::tsCircle);
-    }
 
     // Setup the item tracer
     this->yearTracer->setGraph(graph);
+    this->yearTracer->setPen(graph->pen());  // Same color as graph.
     this->yearTracer->setGraphKey(this->customPlot->xAxis->pixelToCoord(event->pos().x()));
     this->yearTracer->setVisible(true);
     this->customPlot->replot();
@@ -175,6 +166,7 @@ void MainWindow::addGraph(MeasurementType mType, Season season, const QString& g
 
     qDebug() << stationId << startYear << endYear << startMonth << endMonth;
 
+    // TODO: Deactivate GUI and load in separate thread.
     auto yearlyAverages = m_dataProvider.getAveragesForMonthRange(stationId, startYear, endYear, startMonth, endMonth, mType);
     if (yearlyAverages->empty()) {
         this->statusBar()->showMessage(std::format("No data for selected station {} available", stationId).c_str());
@@ -189,10 +181,10 @@ void MainWindow::addGraph(MeasurementType mType, Season season, const QString& g
             y.append(yearlyAverages->at(i));
         } else {  // Indicate missing values. Prevents QCP from interpolating over the gap.
             y.append(qQNaN());
-            // Message when the tracer hits this value:
+            // Message when the tracer hits this value (only with style tsCircle).
             // "QPainterPath::arcTo: Adding arc where a parameter is NaN, results are undefined"
             // TODO: How to prevent that?
-            // Anyway, tracer works fine.
+            // Anyway, tracer works fine with tsCircle, too.
         }
     }
     // for (const auto& pair : *yearlyAverages) {
@@ -256,7 +248,6 @@ void MainWindow::on_cmb_stations_textActivated(const QString& selection)
 {
     this->updateGraphs();
 }
-
 
 
 void MainWindow::updateGraphs()
