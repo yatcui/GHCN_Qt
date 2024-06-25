@@ -1,6 +1,10 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+// Experimental: function objects in map (see below)
+// #include <map>
+// #include <functional>
+
 #include <QMainWindow>
 
 #include "qcustomplot.h"
@@ -51,6 +55,9 @@ private:
     QCPItemTracer *yearTracer;
 
     DataProvider m_dataProvider;  // Data model for wheather data
+
+    // Experimental
+    // std::map<QCheckBox*, std::function<void()>> m_checkBoxFunc;
 
     void addGraph(MeasurementType mType, Season season, const QString& graphName);
     void hideGraph(const QString& graphName);

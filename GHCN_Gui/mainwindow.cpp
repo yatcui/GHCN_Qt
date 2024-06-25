@@ -16,10 +16,10 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), m_dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv")
 {
-    this->ui->setupUi(this);
+    this->ui->setupUi(this);  // constructs the widget hierarchy (ui_mainwindow.h)
 
-    // this->ui->chk_tmax_year->setChecked(true);
-    // this->ui->chk_tmin_year->setChecked(true);
+    // Experimental
+    // m_checkBoxFunc.emplace(this->ui->chk_tmax_year, [this](){qDebug() << this->ui->chk_tmax_year->objectName();});
 
     this->customPlot = this->ui->plt_yearspan;  // "rename" to commonly used identifier
     this->customPlot->setInteractions(QCP::iSelectPlottables);
@@ -42,7 +42,6 @@ MainWindow::MainWindow(QWidget *parent)
     this->yearTracer->setPen(QPen(Qt::red));
     this->yearTracer->setBrush(Qt::red);
     this->yearTracer->setSize(10);
-
 
     // TODO: How to show initially empty QCustomPlot widget? Make pens for all items transparent?
     this->customPlot->hide();   
@@ -99,14 +98,21 @@ void MainWindow::showPointValue(QMouseEvent* event)
     }
     QCPGraph * graph = selectedGraphs.first();
 
-     // Setup the item tracer
+    // Get the values from the tracer's coords
+    QPointF temp = this->yearTracer->position->coords();
+    if (std::isnan(temp.y())) {
+        // NaN is detected, but QPainterPath::arcTo warning is not prevented.
+        // Occurs when tracer goes from a valid value into a gap with NaN.
+        this->yearTracer->setStyle(QCPItemTracer::tsNone);
+    } else {
+        this->yearTracer->setStyle(QCPItemTracer::tsCircle);
+    }
+
+    // Setup the item tracer
     this->yearTracer->setGraph(graph);
     this->yearTracer->setGraphKey(this->customPlot->xAxis->pixelToCoord(event->pos().x()));
     this->yearTracer->setVisible(true);
     this->customPlot->replot();
-
-    // Get the values from the tracer's coords
-    QPointF temp = this->yearTracer->position->coords();
 
     // Show a tooltip which tells the values
     QToolTip::showText(event->globalPosition().toPoint(),
@@ -177,10 +183,22 @@ void MainWindow::addGraph(MeasurementType mType, Season season, const QString& g
     }
     QVector<double> x;
     QVector<double> y;
-    for (const auto& pair : *yearlyAverages) {
-        x.append(pair.first);
-        y.append(pair.second);
+    for (int i = startYear; i <= endYear; ++i) {
+        x.append(i);
+        if (yearlyAverages->contains(i)) {
+            y.append(yearlyAverages->at(i));
+        } else {  // Indicate missing values. Prevents QCP from interpolating over the gap.
+            y.append(qQNaN());
+            // Message when the tracer hits this value:
+            // "QPainterPath::arcTo: Adding arc where a parameter is NaN, results are undefined"
+            // TODO: How to prevent that?
+            // Anyway, tracer works fine.
+        }
     }
+    // for (const auto& pair : *yearlyAverages) {
+    //     x.append(pair.first);
+    //     y.append(pair.second);
+    // }
 
     QCPGraph * graph = nullptr;
     for (int i = 0; i < this->customPlot->graphCount(); ++i) {
@@ -196,9 +214,11 @@ void MainWindow::addGraph(MeasurementType mType, Season season, const QString& g
     graph->setData(x, y, true);
     graph->setName(graphName);
 
-    // Do *not* indicate selection of graph by different pen.
-    // QPen pen = graph->pen();
-    // graph->selectionDecorator()->setPen(pen);
+    // Pen to indicate selected graph.
+    QPen pen = graph->pen();
+    QPen selPen = QPen(pen);
+    selPen.setWidthF(1.5);
+    graph->selectionDecorator()->setPen(selPen);
 
     // Data points as filled circles.
     graph->setScatterStyle(QCPScatterStyle::ssDisc);
@@ -376,5 +396,7 @@ void MainWindow::on_chk_tmin_year_stateChanged(int state)
 
 void MainWindow::on_chk_tmax_year_stateChanged(int state)
 {
+    // Experimental (see mainwindow.h)
+    // m_checkBoxFunc[this->ui->chk_tmax_year]();
     this->updateGraphs();
 }
