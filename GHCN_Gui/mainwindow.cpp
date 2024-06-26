@@ -52,7 +52,16 @@ MainWindow::MainWindow(QWidget *parent)
     m_graphWidth = 1;
     m_selectedGraphWidth = 1.5;
 
-    this->customPlot->hide();   
+    m_lastSearchParameters = std::make_unique<StationSearchParameters>(49.49, 10.99, 50, 5, 1960, 2023);
+
+    this->ui->spb_latitude->setValue(m_lastSearchParameters->latitude());
+    this->ui->spb_longitude->setValue(m_lastSearchParameters->longitude());
+    this->ui->spb_radius->setValue(m_lastSearchParameters->radius());
+    this->ui->spb_top->setValue(m_lastSearchParameters->top());
+    this->ui->spb_startyear->setValue(m_lastSearchParameters->startYear());
+    this->ui->spb_endyear->setValue(m_lastSearchParameters->endYear());
+
+    this->customPlot->hide();
 }
 
 
@@ -423,3 +432,13 @@ void MainWindow::on_chk_tmax_year_stateChanged(int state)
     // m_checkBoxFunc[this->ui->chk_tmax_year]();
     this->updateGraphs();
 }
+
+void MainWindow::on_spb_latitude_valueChanged(double value)
+{
+    if (value == m_lastSearchParameters->latitude()) {
+        qDebug() << "latitude restored to" << m_lastSearchParameters->latitude();
+    } else {
+        qDebug() << "latitude value set to" << value;
+    }
+}
+

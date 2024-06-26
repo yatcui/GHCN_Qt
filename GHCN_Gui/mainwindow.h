@@ -5,6 +5,8 @@
 // #include <map>
 // #include <functional>
 
+#include <memory>
+
 #include <QMainWindow>
 
 #include "qcustomplot.h"
@@ -49,12 +51,84 @@ private slots:
     void on_cmb_stations_currentTextChanged(const QString& selection);
     void on_btn_update_clicked();
 
-private:
-    Ui::MainWindow *ui;
-    QCustomPlot *customPlot;
-    QCPItemTracer *yearTracer;
+    void on_spb_latitude_valueChanged(double value);
 
-    DataProvider m_dataProvider;  // Data model for wheather data
+private:
+    class StationSearchParameters
+    {
+    public:
+        StationSearchParameters(double latitude, double longitude, int radius, int top, int startYear, int endYear)
+            : m_latitude(latitude),
+            m_longitude(longitude),
+            m_radius(radius),
+            m_top(top),
+            m_startYear(startYear),
+            m_endYear(endYear)
+            {};
+
+        StationSearchParameters(const StationSearchParameters& other)
+        {
+            m_latitude = other.m_latitude;
+            m_longitude = other.m_longitude;
+            m_radius = other.m_radius;
+            m_top = other.m_top;
+            m_startYear = other.m_startYear;
+            m_endYear = other.m_endYear;
+        };
+
+        StationSearchParameters& operator=(const StationSearchParameters& other)
+        {
+            m_latitude = other.m_latitude;
+            m_longitude = other.m_longitude;
+            m_radius = other.m_radius;
+            m_top = other.m_top;
+            m_startYear = other.m_startYear;
+            m_endYear = other.m_endYear;
+            return *this;
+        };
+
+        bool operator==(const StationSearchParameters& other) {
+            return (m_latitude == other.m_latitude &&
+                    m_longitude == other.m_longitude &&
+                    m_radius == other.m_radius &&
+                    m_top == other.m_top &&
+                    m_startYear == other.m_startYear &&
+                    m_endYear == other.m_endYear);
+        };
+
+        const double& latitude() const {
+            return m_latitude;
+        };
+
+        const double& longitude() const {
+            return m_longitude;
+        };
+
+        const int& radius() const {
+            return m_radius;
+        };
+
+        const int& top() const {
+            return m_top;
+        };
+
+        const int& startYear() const {
+            return m_startYear;
+        };
+
+        const int& endYear() const {
+            return m_endYear;
+        };
+
+    private:
+        double m_latitude;
+        double m_longitude;
+        int m_radius;
+        int m_top;
+        int m_startYear;
+        int m_endYear;
+    };
+
 
     class GraphConfig
     {
@@ -75,6 +149,15 @@ private:
         std::string m_maxColor;
         std::string m_minColor;
     };
+
+private:
+    Ui::MainWindow *ui;
+    QCustomPlot *customPlot;
+    QCPItemTracer *yearTracer;
+
+    DataProvider m_dataProvider;  // Data model for wheather data
+
+    std::unique_ptr<StationSearchParameters> m_lastSearchParameters;
 
     std::map<Season, GraphConfig> m_seasonGraphConfig;  // Specific graph configs for seasons
     double m_graphWidth;  // General graph line width
