@@ -78,8 +78,7 @@ void MainWindow::onSelectionChangedByUser()
 void MainWindow::onPlottableClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
 {
     if (typeid(*plottable) == typeid(QCPGraph)) {
-        qDebug() << "Start tracer for graph" << plottable->name();
-        this->showPointValue(event);  // Start tracer
+        this->showPointValue(event);  // Show tracer here
     }
 }
 
@@ -175,7 +174,7 @@ void MainWindow::addGraph(MeasurementType mType, Season season, const QString& g
         endMonth = 12;
     }
 
-    // TODO: Load in background thread if data needs to be downloaded. Ask data provider in advance.
+    // TODO: Load in background thread if data needs to be downloaded. Ask data providerin advance.
     //       GUI elements should be disabled for longer loading times.
     auto yearlyAverages = m_dataProvider.getAveragesForMonthRange(stationId, startYear, endYear, startMonth, endMonth, mType);
 
@@ -192,7 +191,7 @@ void MainWindow::addGraph(MeasurementType mType, Season season, const QString& g
             y.append(yearlyAverages->at(i));
         } else {  // Indicate missing values. Prevents QCP from interpolating over the gap.
             y.append(qQNaN());
-            // Message when the tracer hits this value (only with style tsCircle).
+            // Message when the tracer hits this value (only with style tsCircle):
             // "QPainterPath::arcTo: Adding arc where a parameter is NaN, results are undefined"
             // TODO: How to prevent that?
             // Anyway, tracer works fine with tsCircle, too.
@@ -270,18 +269,23 @@ void MainWindow::updateGraphs()
     this->customPlot->hide();
     this->yearTracer->setGraph(nullptr);
     this->yearTracer->setVisible(false);
+    // TODO: Check in addGraph() if graph already exists with specified parameters and
+    //       just make it visible instead of re-creating it (if applicable).
     this->customPlot->clearGraphs();
     this->statusBar()->clearMessage();
 
     if (this->ui->chk_tmax_spring->isChecked()) {
         this->addGraph(MeasurementType::TMAX, Season::SPRING, "TMAX Spring",
                        QColor(m_seasonGraphConfig.at(Season::SPRING).maxColor().c_str()));
-        // Access to map by operator [] does not compile, as it tries to
-        // construct a GraphConfig object via the default constructor.
-        // Compiler does not know that an entry for Season::Spring exists.
-        // A call to operator [] for an non-exisiting key inserts the default for value
-        // (which is default-constructed for objects).
-        // On the contrary, .at() performs bound checking an thows std::out_of_range.
+        /* Note:
+         * Access to map by operator [] does not compile, as it tries to
+         * construct a GraphConfig object via the default constructor.
+         * Compiler does not know that an entry for Season::Spring exists.
+         * A call to operator [] for an non-exisiting key inserts the default for value
+         * (which is default-constructed for objects).
+         * On the contrary, .at() performs bound checking an thows std::out_of_range.
+         */
+
     } else {
         this->hideGraph("TMAX Spring");
     }

@@ -63,17 +63,6 @@ private:
             : m_maxColor(maxColor), m_minColor(minColor)
             {};
 
-        GraphConfig(const GraphConfig& other)
-            : m_maxColor(other.m_maxColor), m_minColor(other.m_minColor)
-            {};
-
-        GraphConfig& operator=(const GraphConfig& other)
-        {
-            GraphConfig temp{other};
-            std::swap(*this, temp);
-            return *this;
-        }
-
         const std::string& maxColor() const {
             return m_maxColor;
         };
