@@ -46,7 +46,7 @@ private slots:
     void on_chk_tmax_year_stateChanged(int state);
     void on_chk_tmin_year_stateChanged(int state);
 
-    void on_cmb_stations_textActivated(const QString& selection);
+    void on_cmb_stations_currentTextChanged(const QString& selection);
     void on_btn_update_clicked();
 
 private:

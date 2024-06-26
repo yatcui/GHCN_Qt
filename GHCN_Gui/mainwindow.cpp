@@ -127,151 +127,11 @@ void MainWindow::showPointValue(QMouseEvent* event)
 }
 
 
-void MainWindow::addGraph(MeasurementType mType, Season season, const QString& graphName, const QColor& color)
-{
-    const std::string stationId = this->ui->cmb_stations->currentText().toStdString();
-    int startYear = this->ui->spb_startyear->value();
-    int endYear = this->ui->spb_endyear->value();
-    double longitude = this->ui->spb_longitude->value();
-    int startMonth = -1;
-    int endMonth = -1;
-
-
-    if (season == Season::SPRING) {
-        if (longitude > 0) {
-            startMonth = 3;
-            endMonth = 5;
-        } else {
-            startMonth = 9;
-            endMonth = 11;
-        }
-    } else if (season == Season::SUMMER) {
-        if (longitude > 0) {
-            startMonth = 6;
-            endMonth = 8;
-        } else {
-            startMonth = 12;
-            endMonth = 2;
-        }
-    } else if (season == Season::AUTUMN) {
-        if (longitude > 0) {
-            startMonth = 9;
-            endMonth = 11;
-        } else {
-            startMonth = 3;
-            endMonth = 5;
-        }
-    } else if (season == Season::WINTER) {
-        if (longitude > 0) {
-            startMonth = 12;
-            endMonth = 2;
-        } else {
-            startMonth = 6;
-            endMonth = 8;
-        }
-    } else {  // Full year
-        startMonth = 1;
-        endMonth = 12;
-    }
-
-    // TODO: Load in background thread if data needs to be downloaded. Ask data providerin advance.
-    //       GUI elements should be disabled for longer loading times.
-    auto yearlyAverages = m_dataProvider.getAveragesForMonthRange(stationId, startYear, endYear, startMonth, endMonth, mType);
-
-    if (yearlyAverages->empty()) {
-        this->statusBar()->showMessage(std::format("No data for selected station {} available", stationId).c_str());
-        // this->customPlot->show();  // Show previous plot.
-        return;
-    }
-    QVector<double> x;
-    QVector<double> y;
-    for (int i = startYear; i <= endYear; ++i) {
-        x.append(i);
-        if (yearlyAverages->contains(i)) {
-            y.append(yearlyAverages->at(i));
-        } else {  // Indicate missing values. Prevents QCP from interpolating over the gap.
-            y.append(qQNaN());
-            // Message when the tracer hits this value (only with style tsCircle):
-            // "QPainterPath::arcTo: Adding arc where a parameter is NaN, results are undefined"
-            // TODO: How to prevent that?
-            // Anyway, tracer works fine with tsCircle, too.
-        }
-    }
-    // for (const auto& pair : *yearlyAverages) {
-    //     x.append(pair.first);
-    //     y.append(pair.second);
-    // }
-
-    QCPGraph * graph = nullptr;
-    for (int i = 0; i < this->customPlot->graphCount(); ++i) {
-        if (this->customPlot->graph(i)->name() == graphName) {
-            graph = this->customPlot->graph(i);
-            graph->setVisible(true);
-        }
-    }
-    if (graph == nullptr) {
-        this->customPlot->addGraph();
-        graph = this->customPlot->graph();
-    }
-    graph->setData(x, y, true);
-    graph->setName(graphName);
-
-    QPen pen = graph->pen();
-    pen.setColor(color);
-    pen.setWidthF(m_graphWidth);  // Default: zero (0), which makes for a 1 pt width graph.
-    graph->setPen(pen);
-
-    // Pen to indicate selected graph.
-    QPen selPen = QPen(pen);
-    selPen.setWidthF(m_selectedGraphWidth);
-    graph->selectionDecorator()->setPen(selPen);
-
-    // Data points as filled circles.
-    graph->setScatterStyle(QCPScatterStyle::ssDisc);
-}
-
-
-void MainWindow::hideGraph(const QString& graphName) {
-
-    for (int i = 0; i < this->customPlot->graphCount(); ++i) {
-        if (this->customPlot->graph(i)->name() == graphName) {
-            this->customPlot->graph(i)->setVisible(false);
-            break;
-        }
-    }
-}
-
-
-void MainWindow::onStationSelectionChanged()
-{
-    if (this->customPlot->selectedGraphs().isEmpty()) {
-        this->yearTracer->setGraph(nullptr);  // De-register graph (if any) from tracer
-        this->yearTracer->setVisible(false);
-        this->customPlot->replot();
-    }
-}
-
-
-void MainWindow::on_btn_update_clicked()
-{
-
-}
-
-
-void MainWindow::on_cmb_stations_textActivated(const QString& selection)
-{
-    this->updateGraphs();
-}
-
-
 void MainWindow::updateGraphs()
 {
     this->customPlot->hide();
     this->yearTracer->setGraph(nullptr);
     this->yearTracer->setVisible(false);
-    // TODO: Check in addGraph() if graph already exists with specified parameters and
-    //       just make it visible instead of re-creating it (if applicable).
-    this->customPlot->clearGraphs();
     this->statusBar()->clearMessage();
 
     if (this->ui->chk_tmax_spring->isChecked()) {
@@ -368,6 +228,150 @@ void MainWindow::updateGraphs()
 }
 
 
+void MainWindow::addGraph(MeasurementType mType, Season season, const QString& graphName, const QColor& color)
+{
+    const std::string stationId = this->ui->cmb_stations->currentText().toStdString();
+    int startYear = this->ui->spb_startyear->value();
+    int endYear = this->ui->spb_endyear->value();
+    double longitude = this->ui->spb_longitude->value();
+    int startMonth = -1;
+    int endMonth = -1;
+
+
+    if (season == Season::SPRING) {
+        if (longitude > 0) {
+            startMonth = 3;
+            endMonth = 5;
+        } else {
+            startMonth = 9;
+            endMonth = 11;
+        }
+    } else if (season == Season::SUMMER) {
+        if (longitude > 0) {
+            startMonth = 6;
+            endMonth = 8;
+        } else {
+            startMonth = 12;
+            endMonth = 2;
+        }
+    } else if (season == Season::AUTUMN) {
+        if (longitude > 0) {
+            startMonth = 9;
+            endMonth = 11;
+        } else {
+            startMonth = 3;
+            endMonth = 5;
+        }
+    } else if (season == Season::WINTER) {
+        if (longitude > 0) {
+            startMonth = 12;
+            endMonth = 2;
+        } else {
+            startMonth = 6;
+            endMonth = 8;
+        }
+    } else {  // Full year
+        startMonth = 1;
+        endMonth = 12;
+    }
+
+    QCPGraph * graph = nullptr;
+    for (int i = 0; i < this->customPlot->graphCount(); ++i) {
+        if (this->customPlot->graph(i)->name() == graphName) {
+            graph = this->customPlot->graph(i);
+            graph->setVisible(true);
+            break;
+        }
+    }
+    if (graph == nullptr) {
+        this->customPlot->addGraph();
+        graph = this->customPlot->graph();
+    } else {
+        double firstKey = graph->data()->at(0)->key;
+        double lastKey = graph->data()->at(graph->data()->size() - 1)->key;
+        // Check if graph already exists with required parameter values.
+        if (firstKey == startYear && lastKey == endYear) {
+            // qDebug() << "Graph" << graphName << "in range" << lastKey << firstKey << "made visible";
+            return;
+        }
+    }
+
+    // TODO: Load in background thread if data needs to be downloaded. Ask data providerin advance.
+    //       GUI elements should be disabled for longer loading times.
+    auto yearlyAverages = m_dataProvider.getAveragesForMonthRange(stationId, startYear, endYear, startMonth, endMonth, mType);
+
+    if (yearlyAverages->empty()) {
+        this->statusBar()->showMessage(std::format("No data for selected station {} available", stationId).c_str());
+        // this->customPlot->show();  // Show previous plot.
+        return;
+    }
+    QVector<double> x;
+    QVector<double> y;
+    for (int i = startYear; i <= endYear; ++i) {
+        x.append(i);
+        if (yearlyAverages->contains(i)) {
+            y.append(yearlyAverages->at(i));
+        } else {  // Indicate missing values. Prevents QCP from interpolating over the gap.
+            y.append(qQNaN());
+            // Message when the tracer hits this value (only with style tsCircle):
+            // "QPainterPath::arcTo: Adding arc where a parameter is NaN, results are undefined"
+            // TODO: How to prevent that?
+            // Anyway, tracer works fine with tsCircle, too.
+        }
+    }
+
+    graph->setData(x, y, true);
+    graph->setName(graphName);
+
+    QPen pen = graph->pen();
+    pen.setColor(color);
+    pen.setWidthF(m_graphWidth);  // Default: zero (0), which makes for a 1 pt width graph.
+    graph->setPen(pen);
+
+    // Pen to indicate selected graph.
+    QPen selPen = QPen(pen);
+    selPen.setWidthF(m_selectedGraphWidth);
+    graph->selectionDecorator()->setPen(selPen);
+
+    // Data points as filled circles.
+    graph->setScatterStyle(QCPScatterStyle::ssDisc);
+}
+
+
+void MainWindow::hideGraph(const QString& graphName) {
+
+    for (int i = 0; i < this->customPlot->graphCount(); ++i) {
+        if (this->customPlot->graph(i)->name() == graphName) {
+            this->customPlot->graph(i)->setVisible(false);
+            break;
+        }
+    }
+}
+
+
+void MainWindow::onStationSelectionChanged()
+{
+    if (this->customPlot->selectedGraphs().isEmpty()) {
+        this->yearTracer->setGraph(nullptr);  // De-register graph (if any) from tracer
+        this->yearTracer->setVisible(false);
+        this->customPlot->replot();
+    }
+}
+
+
+void MainWindow::on_btn_update_clicked()
+{
+
+}
+
+
+void MainWindow::on_cmb_stations_currentTextChanged(const QString& selection)
+{
+    this->customPlot->clearGraphs();
+    this->updateGraphs();
+}
+
+
 void MainWindow::on_chk_tmin_spring_stateChanged(int state)
 {
     this->updateGraphs();
@@ -387,7 +391,6 @@ void MainWindow::on_chk_tmax_summer_stateChanged(int state)
 {
     this->updateGraphs();
 }
-
 
 void MainWindow::on_chk_tmin_autumn_stateChanged(int state)
 {

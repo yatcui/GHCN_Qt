@@ -223,7 +223,7 @@
         <item row="7" column="0" colspan="3">
          <widget class="QPushButton" name="btn_update">
           <property name="text">
-           <string>Update</string>
+           <string>Update Stations</string>
           </property>
          </widget>
         </item>
