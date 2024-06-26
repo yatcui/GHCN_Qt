@@ -40,6 +40,13 @@ MainWindow::MainWindow(QWidget *parent)
     this->yearTracer->setInterpolating(false);
     this->yearTracer->setStyle(QCPItemTracer::tsCrosshair);  // tsCircle: warning messages for NaN y values.
 
+    // Set up colors for graphs. TODO: Read from config file.
+    m_seasonGraphConfig.emplace(Season::SPRING, GraphConfig("#99FF99", "#4C9900"));
+    m_seasonGraphConfig.emplace(Season::SUMMER, GraphConfig("#FFB266", "#CC0000"));
+    m_seasonGraphConfig.emplace(Season::AUTUMN, GraphConfig("#CCCC00", "#994C00"));
+    m_seasonGraphConfig.emplace(Season::WINTER, GraphConfig("#99CCFF", "#0000FF"));
+    m_seasonGraphConfig.emplace(Season::YEAR, GraphConfig("#A0A0A0", "#000000"));
+
     // TODO: How to show initially empty QCustomPlot widget? Make pens for all items transparent?
     this->customPlot->hide();   
 }
@@ -117,7 +124,7 @@ void MainWindow::showPointValue(QMouseEvent* event)
 }
 
 
-void MainWindow::addGraph(MeasurementType mType, Season season, const QString& graphName)
+void MainWindow::addGraph(MeasurementType mType, Season season, const QString& graphName, const QColor& color)
 {
     const std::string stationId = this->ui->cmb_stations->currentText().toStdString();
     int startYear = this->ui->spb_startyear->value();
@@ -166,8 +173,10 @@ void MainWindow::addGraph(MeasurementType mType, Season season, const QString& g
 
     qDebug() << stationId << startYear << endYear << startMonth << endMonth;
 
-    // TODO: Deactivate GUI and load in separate thread.
+    // TODO: Load in background thread if data needs to be downloaded. Ask data provider in advance.
+    //       GUI elements should be disabled for longer loading times.
     auto yearlyAverages = m_dataProvider.getAveragesForMonthRange(stationId, startYear, endYear, startMonth, endMonth, mType);
+
     if (yearlyAverages->empty()) {
         this->statusBar()->showMessage(std::format("No data for selected station {} available", stationId).c_str());
         // this->customPlot->show();  // Show previous plot.
@@ -206,8 +215,11 @@ void MainWindow::addGraph(MeasurementType mType, Season season, const QString& g
     graph->setData(x, y, true);
     graph->setName(graphName);
 
-    // Pen to indicate selected graph.
     QPen pen = graph->pen();
+    pen.setColor(color);
+    graph->setPen(pen);
+
+    // Pen to indicate selected graph.
     QPen selPen = QPen(pen);
     selPen.setWidthF(1.5);
     graph->selectionDecorator()->setPen(selPen);
@@ -259,67 +271,77 @@ void MainWindow::updateGraphs()
     this->statusBar()->clearMessage();
 
     if (this->ui->chk_tmax_spring->isChecked()) {
-        this->addGraph(MeasurementType::TMAX, Season::SPRING, "TMAX Spring");
+        this->addGraph(MeasurementType::TMAX, Season::SPRING, "TMAX Spring",
+                       QColor(m_seasonGraphConfig.at(Season::SPRING).maxColor().c_str()));
+        // Access to map by operator [] does not compile, as it tries to
+        // construct a GraphConfig object via the default constructor.
+        // Compiler does not know that an entry for Season::Spring exists.
+        // A call to operator [] for an non-exisiting key inserts the default for value
+        // (which is default-constructed for objects).
+        // On the contrary, .at() performs bound checking an thows std::out_of_range.
     } else {
         this->hideGraph("TMAX Spring");
     }
 
     if (this->ui->chk_tmin_spring->isChecked()) {
-        this->addGraph(MeasurementType::TMIN, Season::SPRING, "TMIN Spring");
+        this->addGraph(MeasurementType::TMIN, Season::SPRING, "TMIN Spring",
+                       QColor(m_seasonGraphConfig.at(Season::SPRING).minColor().c_str()));
     } else {
         this->hideGraph("TMIN Spring");
     }
 
     if (this->ui->chk_tmax_summer->isChecked()) {
-        this->addGraph(MeasurementType::TMAX, Season::SUMMER, "TMAX Summer");
+        this->addGraph(MeasurementType::TMAX, Season::SUMMER, "TMAX Summer",
+                       QColor(m_seasonGraphConfig.at(Season::SUMMER).maxColor().c_str()));
     } else {
         this->hideGraph("TMAX Summer");
     }
 
     if (this->ui->chk_tmin_summer->isChecked()) {
-        this->addGraph(MeasurementType::TMIN, Season::SUMMER, "TMIN Summer");
+        this->addGraph(MeasurementType::TMIN, Season::SUMMER, "TMIN Summer",
+                       QColor(m_seasonGraphConfig.at(Season::SUMMER).minColor().c_str()));
     } else {
         this->hideGraph("TMIN Summer");
     }
 
-    if (this->ui->chk_tmax_summer->isChecked()) {
-        this->addGraph(MeasurementType::TMAX, Season::SUMMER, "TMAX Summer");
-    } else {
-        this->hideGraph("TMAX Summer");
-    }
-
     if (this->ui->chk_tmax_autumn->isChecked()) {
-        this->addGraph(MeasurementType::TMAX, Season::AUTUMN, "TMAX Autumn");
+        this->addGraph(MeasurementType::TMAX, Season::AUTUMN, "TMAX Autumn",
+                       QColor(m_seasonGraphConfig.at(Season::AUTUMN).maxColor().c_str()));
     } else {
         this->hideGraph("TMAX Autumn");
     }
 
     if (this->ui->chk_tmin_autumn->isChecked()) {
-        this->addGraph(MeasurementType::TMIN, Season::AUTUMN, "TMIN Autumn");
+        this->addGraph(MeasurementType::TMIN, Season::AUTUMN, "TMIN Autumn",
+                       QColor(m_seasonGraphConfig.at(Season::AUTUMN).minColor().c_str()));
     } else {
         this->hideGraph("TMIN Autumn");
     }
 
     if (this->ui->chk_tmax_winter->isChecked()) {
-        this->addGraph(MeasurementType::TMAX, Season::WINTER, "TMAX Winter");
+        this->addGraph(MeasurementType::TMAX, Season::WINTER, "TMAX Winter",
+                       QColor(m_seasonGraphConfig.at(Season::WINTER).maxColor().c_str()));
     } else {
         this->hideGraph("TMAX Winter");
     }
 
     if (this->ui->chk_tmin_winter->isChecked()) {
-        this->addGraph(MeasurementType::TMIN, Season::WINTER, "TMIN Winter");
+        this->addGraph(MeasurementType::TMIN, Season::WINTER, "TMIN Winter",
+                       QColor(m_seasonGraphConfig.at(Season::WINTER).minColor().c_str()));
     } else {
         this->hideGraph("TMIN Winter");
     }
 
     if (this->ui->chk_tmax_year->isChecked()) {
-        this->addGraph(MeasurementType::TMAX, Season::YEAR, "TMAX Year");
+        this->addGraph(MeasurementType::TMAX, Season::YEAR, "TMAX Year",
+                       QColor(m_seasonGraphConfig.at(Season::YEAR).maxColor().c_str()));
     } else {
         this->hideGraph("TMAX Year");
     }
 
     if (this->ui->chk_tmin_year->isChecked()) {
-        this->addGraph(MeasurementType::TMIN, Season::YEAR, "TMIN Year");
+        this->addGraph(MeasurementType::TMIN, Season::YEAR, "TMIN Year",
+                       QColor(m_seasonGraphConfig.at(Season::YEAR).minColor().c_str()));
     } else {
         this->hideGraph("TMIN Year");
     }

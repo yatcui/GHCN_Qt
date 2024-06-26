@@ -56,10 +56,43 @@ private:
 
     DataProvider m_dataProvider;  // Data model for wheather data
 
+    class GraphConfig
+    {
+    public:
+        GraphConfig(const std::string& maxColor, const std::string& minColor)
+            : m_maxColor(maxColor), m_minColor(minColor)
+            {};
+
+        GraphConfig(const GraphConfig& other)
+            : m_maxColor(other.m_maxColor), m_minColor(other.m_minColor)
+            {};
+
+        GraphConfig& operator=(const GraphConfig& other)
+        {
+            GraphConfig temp{other};
+            std::swap(*this, temp);
+            return *this;
+        }
+
+        const std::string& maxColor() const {
+            return m_maxColor;
+        };
+
+        const std::string& minColor() const {
+            return m_minColor;
+        };
+
+    private:
+        std::string m_maxColor;
+        std::string m_minColor;
+    };
+
+    std::map<Season, GraphConfig> m_seasonGraphConfig;
+
     // Experimental
     // std::map<QCheckBox*, std::function<void()>> m_checkBoxFunc;
 
-    void addGraph(MeasurementType mType, Season season, const QString& graphName);
+    void addGraph(MeasurementType mType, Season season, const QString& graphName, const QColor& color);
     void hideGraph(const QString& graphName);
     void updateGraphs();
     void onStationSelectionChanged();
