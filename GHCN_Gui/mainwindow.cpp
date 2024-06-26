@@ -40,14 +40,18 @@ MainWindow::MainWindow(QWidget *parent)
     this->yearTracer->setInterpolating(false);
     this->yearTracer->setStyle(QCPItemTracer::tsCrosshair);  // tsCircle: warning messages for NaN y values.
 
-    // Set up colors for graphs. TODO: Read from config file.
+    // TODO: Read set up values from config file.
+    // Set up colors for graphs.
     m_seasonGraphConfig.emplace(Season::SPRING, GraphConfig("#99FF99", "#4C9900"));
     m_seasonGraphConfig.emplace(Season::SUMMER, GraphConfig("#FFB266", "#CC0000"));
     m_seasonGraphConfig.emplace(Season::AUTUMN, GraphConfig("#CCCC00", "#994C00"));
     m_seasonGraphConfig.emplace(Season::WINTER, GraphConfig("#99CCFF", "#0000FF"));
     m_seasonGraphConfig.emplace(Season::YEAR, GraphConfig("#A0A0A0", "#000000"));
 
-    // TODO: How to show initially empty QCustomPlot widget? Make pens for all items transparent?
+    // Set up width for normal and selected graphs.
+    m_graphWidth = 1;
+    m_selectedGraphWidth = 1.5;
+
     this->customPlot->hide();   
 }
 
@@ -171,8 +175,6 @@ void MainWindow::addGraph(MeasurementType mType, Season season, const QString& g
         endMonth = 12;
     }
 
-    qDebug() << stationId << startYear << endYear << startMonth << endMonth;
-
     // TODO: Load in background thread if data needs to be downloaded. Ask data provider in advance.
     //       GUI elements should be disabled for longer loading times.
     auto yearlyAverages = m_dataProvider.getAveragesForMonthRange(stationId, startYear, endYear, startMonth, endMonth, mType);
@@ -217,11 +219,12 @@ void MainWindow::addGraph(MeasurementType mType, Season season, const QString& g
 
     QPen pen = graph->pen();
     pen.setColor(color);
+    pen.setWidthF(m_graphWidth);  // Default: zero (0), which makes for a 1 pt width graph.
     graph->setPen(pen);
 
     // Pen to indicate selected graph.
     QPen selPen = QPen(pen);
-    selPen.setWidthF(1.5);
+    selPen.setWidthF(m_selectedGraphWidth);
     graph->selectionDecorator()->setPen(selPen);
 
     // Data points as filled circles.

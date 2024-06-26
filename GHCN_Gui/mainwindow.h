@@ -87,7 +87,9 @@ private:
         std::string m_minColor;
     };
 
-    std::map<Season, GraphConfig> m_seasonGraphConfig;
+    std::map<Season, GraphConfig> m_seasonGraphConfig;  // Specific graph configs for seasons
+    double m_graphWidth;  // General graph line width
+    double m_selectedGraphWidth;  // Line width for selected graphs
 
     // Experimental
     // std::map<QCheckBox*, std::function<void()>> m_checkBoxFunc;
