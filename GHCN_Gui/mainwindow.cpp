@@ -52,14 +52,16 @@ MainWindow::MainWindow(QWidget *parent)
     m_graphWidth = 1;
     m_selectedGraphWidth = 1.5;
 
-    m_lastSearchParameters = std::make_unique<StationSearchParameters>(49.49, 10.99, 50, 5, 1960, 2023);
+    m_previousSearchParameters = std::make_unique<StationSearchParameters>(49.49, 10.99, 50, 5, 1960, 2023);
+    m_currentSearchParameters = std::make_unique<StationSearchParameters>(*m_previousSearchParameters);
 
-    this->ui->spb_latitude->setValue(m_lastSearchParameters->latitude());
-    this->ui->spb_longitude->setValue(m_lastSearchParameters->longitude());
-    this->ui->spb_radius->setValue(m_lastSearchParameters->radius());
-    this->ui->spb_top->setValue(m_lastSearchParameters->top());
-    this->ui->spb_startyear->setValue(m_lastSearchParameters->startYear());
-    this->ui->spb_endyear->setValue(m_lastSearchParameters->endYear());
+    // TODO: Set upper and lower boundaries.
+    this->ui->spb_latitude->setValue(m_previousSearchParameters->latitude());
+    this->ui->spb_longitude->setValue(m_previousSearchParameters->longitude());
+    this->ui->spb_radius->setValue(m_previousSearchParameters->radius());
+    this->ui->spb_top->setValue(m_previousSearchParameters->top());
+    this->ui->spb_startyear->setValue(m_previousSearchParameters->startYear());
+    this->ui->spb_endyear->setValue(m_previousSearchParameters->endYear());
 
     this->customPlot->hide();
 }
@@ -435,10 +437,78 @@ void MainWindow::on_chk_tmax_year_stateChanged(int state)
 
 void MainWindow::on_spb_latitude_valueChanged(double value)
 {
-    if (value == m_lastSearchParameters->latitude()) {
-        qDebug() << "latitude restored to" << m_lastSearchParameters->latitude();
+    m_currentSearchParameters->setLatitude(value);
+    if (value == m_previousSearchParameters->latitude()) {
+        qDebug() << "latitude restored to" << m_previousSearchParameters->latitude();
+        qDebug() << "Configuration" << (*m_currentSearchParameters == *m_previousSearchParameters ? "unaltered" : "altered");
+        qDebug() << "Curr:" << m_currentSearchParameters->toString();
+        qDebug() << "Prev:" << m_previousSearchParameters->toString();
     } else {
-        qDebug() << "latitude value set to" << value;
+        qDebug() << "latitude value changed to" << value;
     }
 }
 
+void MainWindow::on_spb_longitude_valueChanged(double value)
+{
+    m_currentSearchParameters->setLongitude(value);
+    if (value == m_previousSearchParameters->longitude()) {
+        qDebug() << "longitude restored to" << m_previousSearchParameters->longitude();
+        qDebug() << "Configuration" << (*m_currentSearchParameters == *m_previousSearchParameters ? "unaltered" : "altered");
+        qDebug() << "Curr:" << m_currentSearchParameters->toString();
+        qDebug() << "Prev:" << m_previousSearchParameters->toString();
+    } else {
+        qDebug() << "longitude value changed to" << value;
+    }
+}
+
+void MainWindow::on_spb_radius_valueChanged(int value)
+{
+    m_currentSearchParameters->setRadius(value);
+    if (value == m_previousSearchParameters->radius()) {
+        qDebug() << "radius restored to" << m_previousSearchParameters->radius();
+        qDebug() << "Configuration" << (*m_currentSearchParameters == *m_previousSearchParameters ? "unaltered" : "altered");
+        qDebug() << "Curr:" << m_currentSearchParameters->toString();
+        qDebug() << "Prev:" << m_previousSearchParameters->toString();
+    } else {
+        qDebug() << "radius value changed to" << value;
+    }
+}
+
+void MainWindow::on_spb_top_valueChanged(int value)
+{
+    m_currentSearchParameters->setTop(value);
+    if (value == m_previousSearchParameters->top()) {
+        qDebug() << "top restored to" << m_previousSearchParameters->top();
+        qDebug() << "Configuration" << (*m_currentSearchParameters == *m_previousSearchParameters ? "unaltered" : "altered");
+        qDebug() << "Curr:" << m_currentSearchParameters->toString();
+        qDebug() << "Prev:" << m_previousSearchParameters->toString();
+    } else {
+        qDebug() << "top value changed to" << value;
+    }
+}
+
+void MainWindow::on_spb_startyear_valueChanged(int value)
+{
+    m_currentSearchParameters->setStartYear(value);
+    if (value == m_previousSearchParameters->startYear()) {
+        qDebug() << "start year restored to" << m_previousSearchParameters->startYear();
+        qDebug() << "Configuration" << (*m_currentSearchParameters == *m_previousSearchParameters ? "unaltered" : "altered");
+        qDebug() << "Curr:" << m_currentSearchParameters->toString();
+        qDebug() << "Prev:" << m_previousSearchParameters->toString();
+    } else {
+        qDebug() << "start year value changed to" << value;
+    }
+}
+
+void MainWindow::on_spb_endyear_valueChanged(int value)
+{
+    m_currentSearchParameters->setEndYear(value);
+    if (value == m_previousSearchParameters->endYear()) {
+        qDebug() << "end year restored to" << m_previousSearchParameters->endYear();
+        qDebug() << "Configuration" << (*m_currentSearchParameters == *m_previousSearchParameters ? "unaltered" : "altered");
+        qDebug() << "Curr:" << m_currentSearchParameters->toString();
+        qDebug() << "Prev:" << m_previousSearchParameters->toString();
+    } else {
+        qDebug() << "end year value changed to" << value;
+    }
+}

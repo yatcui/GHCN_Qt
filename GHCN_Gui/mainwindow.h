@@ -52,6 +52,11 @@ private slots:
     void on_btn_update_clicked();
 
     void on_spb_latitude_valueChanged(double value);
+    void on_spb_longitude_valueChanged(double value);
+    void on_spb_radius_valueChanged(int value);
+    void on_spb_top_valueChanged(int value);
+    void on_spb_startyear_valueChanged(int value);
+    void on_spb_endyear_valueChanged(int value);
 
 private:
     class StationSearchParameters
@@ -87,7 +92,7 @@ private:
             return *this;
         };
 
-        bool operator==(const StationSearchParameters& other) {
+        bool operator==(const StationSearchParameters& other) const {
             return (m_latitude == other.m_latitude &&
                     m_longitude == other.m_longitude &&
                     m_radius == other.m_radius &&
@@ -96,29 +101,25 @@ private:
                     m_endYear == other.m_endYear);
         };
 
-        const double& latitude() const {
-            return m_latitude;
-        };
+        std::string toString() const
+        {
+            return std::format("lat={:.5f}; lng={:.5f}; radius={}; top={}; start={}; end={}",
+                               m_latitude, m_longitude, m_radius, m_top, m_startYear, m_endYear);
+        }
 
-        const double& longitude() const {
-            return m_longitude;
-        };
+        double latitude() const {return m_latitude;};
+        double longitude() const {return m_longitude;};
+        int radius() const {return m_radius;};
+        int top() const {return m_top;};
+        int startYear() const {return m_startYear;};
+        int endYear() const {return m_endYear;};
 
-        const int& radius() const {
-            return m_radius;
-        };
-
-        const int& top() const {
-            return m_top;
-        };
-
-        const int& startYear() const {
-            return m_startYear;
-        };
-
-        const int& endYear() const {
-            return m_endYear;
-        };
+        void setLatitude(double latitude) {m_latitude = latitude;};
+        void setLongitude(double longitude) {m_longitude = longitude;};
+        void setRadius(int radius) {m_radius = radius;};
+        void setTop(int top) {m_top = top;};
+        void setStartYear(int startYear) {m_startYear = startYear;};
+        void setEndYear(int endYear) {m_endYear = endYear;};
 
     private:
         double m_latitude;
@@ -157,13 +158,14 @@ private:
 
     DataProvider m_dataProvider;  // Data model for wheather data
 
-    std::unique_ptr<StationSearchParameters> m_lastSearchParameters;
+    std::unique_ptr<StationSearchParameters> m_previousSearchParameters;
+    std::unique_ptr<StationSearchParameters> m_currentSearchParameters;
 
     std::map<Season, GraphConfig> m_seasonGraphConfig;  // Specific graph configs for seasons
     double m_graphWidth;  // General graph line width
     double m_selectedGraphWidth;  // Line width for selected graphs
 
-    // Experimental
+    // Experimental: Register function object with component.
     // std::map<QCheckBox*, std::function<void()>> m_checkBoxFunc;
 
     void addGraph(MeasurementType mType, Season season, const QString& graphName, const QColor& color);

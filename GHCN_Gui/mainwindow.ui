@@ -113,10 +113,10 @@
            <number>0</number>
           </property>
           <property name="maximum">
-           <number>2024</number>
+           <number>3000</number>
           </property>
           <property name="value">
-           <number>1960</number>
+           <number>0</number>
           </property>
          </widget>
         </item>
@@ -163,10 +163,10 @@
         <item row="5" column="2">
          <widget class="QSpinBox" name="spb_endyear">
           <property name="maximum">
-           <number>2024</number>
+           <number>3000</number>
           </property>
           <property name="value">
-           <number>2023</number>
+           <number>0</number>
           </property>
          </widget>
         </item>
@@ -176,7 +176,7 @@
            <string> km</string>
           </property>
           <property name="value">
-           <number>50</number>
+           <number>0</number>
           </property>
          </widget>
         </item>
@@ -206,7 +206,7 @@
            <number>20</number>
           </property>
           <property name="value">
-           <number>5</number>
+           <number>1</number>
           </property>
          </widget>
         </item>
