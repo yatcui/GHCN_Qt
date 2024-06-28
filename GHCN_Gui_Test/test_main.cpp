@@ -15,11 +15,17 @@ BOOST_AUTO_TEST_CASE(api_nearest_stations)
     double longitude = 10.99019;
     int radius = 50;
 
-    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv");
+    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", "ghcnd-inventory_gm.txt", ".csv");
     auto nearestStations = dataProvider.getNearestStations(latitude, longitude, radius);
 
     BOOST_CHECK_EQUAL("GME00122614", nearestStations->at(0).first);
     BOOST_CHECK_EQUAL("2.2", std::format("{:.1f}", nearestStations->at(0).second));
+    BOOST_CHECK_EQUAL(false, dataProvider.hasMeasurementsForYearRange(nearestStations->at(0).first, 1960, 2023, MeasurementType::TMAX));
+
+    BOOST_CHECK_EQUAL("GME00102380", nearestStations->at(2).first);
+    BOOST_CHECK_EQUAL(true, dataProvider.hasMeasurementsForYearRange(nearestStations->at(2).first, 1960, 2023, MeasurementType::TMAX));
+
+
     // for (std::pair<std::string, double> p : *nearestStations) {
     //     std::cout << std::format("{} at {:.1f} km\n", p.first, p.second);
     // }
@@ -29,7 +35,7 @@ BOOST_AUTO_TEST_CASE(api_yearly_averages)
 {
     const std::string stationId{"GME00102380"};
 
-    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv");
+    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", "ghcnd-inventory_gm.txt", ".csv");
     auto yearlyAverages = dataProvider.getYearlyAverages(stationId, 1960, 2000, MeasurementType::TMAX);
 
     BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages)[1960]), "13.5");
@@ -47,7 +53,7 @@ BOOST_AUTO_TEST_CASE(api_yearly_averages_month_span)
 {
     const std::string stationId{"GME00102380"};
 
-    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv");
+    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", "ghcnd-inventory_gm.txt", ".csv");
 
     auto yearlyAverages_12_2 = dataProvider.getAveragesForMonthRange(stationId, 1960, 2000, 12, 2, MeasurementType::TMAX);
     BOOST_CHECK_EQUAL(std::format("{:.1f}", (*yearlyAverages_12_2)[1960]), "3.8");
@@ -72,7 +78,7 @@ BOOST_AUTO_TEST_CASE(api_montly_averages)
 {
     const std::string stationId{"GME00102380"};
 
-    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv");
+    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", "ghcnd-inventory_gm.txt", ".csv");
     auto monthlyAverages = dataProvider.getMonthlyAverages(stationId, 2000, MeasurementType::TMAX);
 
     BOOST_CHECK_EQUAL(std::format("{:.1f}", (*monthlyAverages)[1]), "2.7");
@@ -86,7 +92,7 @@ BOOST_AUTO_TEST_CASE(api_daily_values)
 {
     const std::string stationId{"GME00102380"};
 
-    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv");
+    DataProvider dataProvider("../../data/", "ghcnd-stations_gm.txt", "ghcnd-inventory_gm.txt", ".csv");
     auto dailyValues = dataProvider.getDailyValues(stationId, 2000, 12, MeasurementType::TMAX);
 
     BOOST_CHECK_EQUAL(std::format("{:.1f}", (*dailyValues)[1]), "6.6");

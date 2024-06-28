@@ -38,12 +38,47 @@
 #include "dataprovider.hpp"
 
 
-
-DataProvider::DataProvider(const std::string& dataDirName, const std::string& stationFileName, const std::string& csvExt)
-    : m_dataDirName(dataDirName), m_stationFileName(stationFileName), m_csvExt(csvExt)
+DataProvider::DataProvider(const std::string& dataDirName,
+                           const std::string& stationFileName,
+                           const std::string& inventoryFileName,
+                           const std::string& csvExt)
+    : m_dataDirName(dataDirName),
+    m_stationFileName(stationFileName),
+    m_inventoryFileName{inventoryFileName},
+    m_csvExt(csvExt)
 {
     m_StationsCache = std::make_unique<std::vector<Station>>();
     readStations();  // Fill station cache. TODO: raise user-defined exception if reading fails.
+
+    m_stationInventory = std::make_unique<std::vector<InventoryEntry>>();
+    readInventory();
+}
+
+
+bool
+DataProvider::readInventory()
+{
+    std::string filename = std::format("{}{}", m_dataDirName, m_inventoryFileName);
+    // std::cout << filename << std::endl;
+    if (std::ifstream inStream{filename, std::ios::in}) {
+        std::string line;
+        while (std::getline(inStream, line)) {
+            try {
+                const std::string id = line.substr(0, 11);
+                const std::string typeName = line.substr(31, 4);
+                const MeasurementType type = Measurement::s_mapStringMeasurementType.at(typeName);
+                const int startYear = stoi(line.substr(36, 4));
+                const int endYear = stoi(line.substr(41,4));
+                // std::cout << ">" << id << "<" << ">" << typeName << "<" << ">" << startYear << "<" << ">" << endYear << "<";
+                m_stationInventory->push_back(InventoryEntry(id, type, startYear, endYear));
+            } catch(std::out_of_range) {
+                // Unknown measurement type (i. e. not in map) => continue.
+            }
+        }
+        return true;
+    } else {
+        return false;  // File stream not valid
+    }
 }
 
 
@@ -422,3 +457,15 @@ DataProvider::getNearestStations(double latitude, double longitude, int radius)
     return nearestStations;
 }
 
+
+bool
+DataProvider::hasMeasurementsForYearRange(const std::string& stationId, int startYear, int endYear, MeasurementType type)
+{
+    const std::vector<InventoryEntry>& entries = *m_stationInventory;
+
+    auto iter = std::ranges::find_if(entries, [=](const InventoryEntry& entry) {return entry.stationId() == stationId &&
+                                                                                        entry.startYear() <= startYear &&
+                                                                                        entry.endYear() >= endYear &&
+                                                                                        entry.type() == type;});
+    return iter != entries.end();
+}

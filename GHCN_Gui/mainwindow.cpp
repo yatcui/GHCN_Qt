@@ -14,7 +14,7 @@
 
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), m_dataProvider("../../data/", "ghcnd-stations_gm.txt", ".csv")
+    : QMainWindow(parent), ui(new Ui::MainWindow), m_dataProvider("../../data/", "ghcnd-stations.txt", "ghcnd-inventory.txt", ".csv")
 {
     this->ui->setupUi(this);  // constructs the widget hierarchy (ui_mainwindow.h)
 
@@ -372,7 +372,27 @@ void MainWindow::onStationSelectionChanged()
 
 void MainWindow::on_btn_update_clicked()
 {
+    *m_previousSearchParameters = *m_currentSearchParameters;
+    this->ui->cmb_stations->clear();
+    auto nearestStations = m_dataProvider.getNearestStations(m_currentSearchParameters->latitude(),
+                                                             m_currentSearchParameters->longitude(),
+                                                             m_currentSearchParameters->radius());
 
+    for (const std::pair<std::string, double>& stationData : *nearestStations) {
+        bool hasTmax = m_dataProvider.hasMeasurementsForYearRange(stationData.first,
+                                                                  m_currentSearchParameters->startYear(),
+                                                                  m_currentSearchParameters->endYear(),
+                                                                  MeasurementType::TMAX);
+
+        bool hasTmin = m_dataProvider.hasMeasurementsForYearRange(stationData.first,
+                                                                  m_currentSearchParameters->startYear(),
+                                                                  m_currentSearchParameters->endYear(),
+                                                                  MeasurementType::TMIN);
+
+        if (hasTmax && hasTmin) {
+            this->ui->cmb_stations->addItem(stationData.first.c_str(), stationData.second);
+        }
+    }
 }
 
 
