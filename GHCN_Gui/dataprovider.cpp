@@ -41,27 +41,34 @@
 
 DataProvider::DataProvider(const std::string& dataDirName, const std::string& stationFileName, const std::string& csvExt)
     : m_dataDirName(dataDirName), m_stationFileName(stationFileName), m_csvExt(csvExt)
-{}
-
-
-std::unique_ptr<std::vector<Station>>
-DataProvider::readStations(std::ifstream& inStream)
 {
-    auto stations = std::make_unique<std::vector<Station>>();
-    std::string line;
-    while (std::getline(inStream, line)) {
-        std::string id = line.substr(0, 11);
-        double latitude = std::stod(line.substr(12, 8));
-        double longitude = std::stod(line.substr(21, 9));
-        double elevation = std::stod(line.substr(31, 6));
-        std::string name = line.substr(41, 30);
-        // Remove trailing whitespace
-        size_t endpos = name.find_last_not_of(" \t\n\r");
-        if (std::string::npos != endpos)
-            name.erase(endpos + 1);
-        stations->push_back(Station(id, latitude, longitude, elevation, name));
+    m_StationsCache = std::make_unique<std::vector<Station>>();
+    readStations();  // Fill station cache. TODO: raise user-defined exception if reading fails.
+}
+
+
+bool
+DataProvider::readStations()
+{
+    std::string filename = std::format("{}{}", m_dataDirName, m_stationFileName);
+    if (std::ifstream inStream{filename, std::ios::in}) {
+        std::string line;
+        while (std::getline(inStream, line)) {
+            std::string id = line.substr(0, 11);
+            double latitude = std::stod(line.substr(12, 8));
+            double longitude = std::stod(line.substr(21, 9));
+            double elevation = std::stod(line.substr(31, 6));
+            std::string name = line.substr(41, 30);
+            // Remove trailing whitespace
+            size_t endpos = name.find_last_not_of(" \t\n\r");
+            if (std::string::npos != endpos)
+                name.erase(endpos + 1);
+            m_StationsCache->push_back(Station(id, latitude, longitude, elevation, name));
+        }
+        return true;
+    } else {
+        return false;  // File stream not valid
     }
-    return stations;
 }
 
 
@@ -90,11 +97,11 @@ DataProvider::haversine(double lat1,  double lat2, double lng1, double lng2)
 }
 
 std::unique_ptr<std::vector<std::pair<int, double>>>
-DataProvider::calcNearestStations(const std::unique_ptr<std::vector<Station>>& stations, double latitude, double longitude, int radius)
+DataProvider::calcNearestStations(double latitude, double longitude, int radius)
 {
     auto nearestStations = std::make_unique<std::vector<std::pair<int, double>>>();
     // 1. Calculate distance from given lat and lng for all stations
-    for (int index{0}; const Station& station : *stations) {
+    for (int index{0}; const Station& station : *m_StationsCache) {
         double distance = haversine(latitude, station.getLatitude(), longitude, station.getLongitude());
         if (distance <= radius) {
             nearestStations->push_back(std::pair<int, double>(index, distance));
@@ -407,10 +414,9 @@ DataProvider::getNearestStations(double latitude, double longitude, int radius)
     std::string filename = std::format("{}{}", m_dataDirName, m_stationFileName);
     auto nearestStations = std::make_unique<std::vector<std::pair<std::string, double>>>();
     if (std::ifstream inStream{filename, std::ios::in}) {
-        auto stations = readStations(inStream);
-        auto nearest = calcNearestStations(stations, latitude, longitude, 50);
+        auto nearest = calcNearestStations(latitude, longitude, radius);
         for (std::pair<int, double> p : *nearest) {
-            nearestStations->push_back(std::pair<std::string, double>(stations->at(p.first).getId(), p.second));
+            nearestStations->push_back(std::pair<std::string, double>(m_StationsCache->at(p.first).getId(), p.second));
         }
     }
     return nearestStations;

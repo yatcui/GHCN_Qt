@@ -85,22 +85,21 @@ private:
     const std::string m_stationFileName;
     const std::string m_csvExt;
 
+    std::unique_ptr<std::vector<Station>> m_StationsCache;  // all available stations
+
+    // Measurements for previously accessed stations. TODO: LRU cache.
     std::map<std::string, std::unique_ptr<std::vector<Measurement>>> m_MeasurementsCache;
 
-    std::unique_ptr<std::vector<Station>>
-    readStations(std::ifstream& inStream);
+    bool readStations();
 
-    double
-    haversine(double lat1,  double lat2, double lng1, double lng2);
+    double haversine(double lat1,  double lat2, double lng1, double lng2);
 
     std::unique_ptr<std::vector<std::pair<int, double>>>
-    calcNearestStations(const std::unique_ptr<std::vector<Station>>& stations, double latitude, double longitude, int radius);
+    calcNearestStations(double latitude, double longitude, int radius);
 
-    const std::string
-    csvFilenameFromStationId(const std::string& station_id);
+    const std::string csvFilenameFromStationId(const std::string& station_id);
 
-    bool
-    readMeasurementsForStation(const std::string& stationId);
+    bool readMeasurementsForStation(const std::string& stationId);
 
     std::span<const Measurement>
     calcMeasurementSpanForYearRange(const std::unique_ptr<std::vector<Measurement>>& measurements, int startYear, int endYear);
